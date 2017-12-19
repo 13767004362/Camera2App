@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <com.xingen.camera.widget.AutoFitTextureView
+        android:id="@+id/camera_auto_fit_texture_view"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintLeft_toLeftOf="@+id/camera_guideline_1"
+        app:layout_constraintRight_toRightOf="@+id/camera_guideline_3"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <ImageView
+        android:id="@+id/camera_bg1"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@drawable/camera_bg_left"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="@+id/camera_guideline_1"
+        app:layout_constraintTop_toTopOf="parent" />
+    <RadioGroup
+        android:id="@+id/camera_direction_radioGroup"
+        android:layout_width="wrap_content"
+
+        android:orientation="vertical"
+        android:gravity="center"
+        app:layout_constraintLeft_toLeftOf="parent"
+        android:layout_marginTop="7.3dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintRight_toRightOf="@+id/camera_bg1"
+        android:background="@drawable/camera_direction_bg"
+        android:layout_height="98dp">
+
+        <RadioButton
+            android:id="@+id/camera_direction_front"
+            android:layout_width="wrap_content"
+            android:button="@null"
+            android:background="@drawable/camera_direction_front"
+            android:layout_height="wrap_content" />
+        <RadioButton
+            android:id="@+id/camera_direction_back"
+            android:layout_width="wrap_content"
+            android:button="@null"
+            android:checked="true"
+            android:background="@drawable/camera_direction_back"
+            android:layout_height="wrap_content" />
+    </RadioGroup>
+
+
+
+    <com.xingen.camera.view.widget.VerticalProgressBarLayout
+        android:id="@+id/camera_vertical_progress_bar"
+        android:layout_width="wrap_content"
+        app:layout_constraintLeft_toLeftOf="parent"
+        android:layout_marginTop="6.7dp"
+        app:layout_constraintTop_toBottomOf="@+id/camera_direction_radioGroup"
+        app:layout_constraintRight_toRightOf="@id/camera_guideline_1"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_marginBottom="8dp"
+        android:layout_height="0dp">
+
+    </com.xingen.camera.view.widget.VerticalProgressBarLayout>
+
+    <ImageView
+        android:id="@+id/camera_bg2"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@drawable/camera_bg_right"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintLeft_toLeftOf="@+id/camera_guideline_2"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+
+    <ImageView
+        android:id="@+id/camera_right_top_controller"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="9.3dp"
+        android:src="@drawable/camera_init_iv"
+
+        app:layout_constraintLeft_toLeftOf="@id/camera_guideline_3"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+
+    <ImageView
+        android:id="@+id/camera_right_bg_2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:src="@drawable/camera_right_bg_2"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <ImageView
+        android:id="@+id/camera_right_bg_3"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:src="@drawable/camera_right_bg_3"
+        app:layout_constraintBottom_toBottomOf="@+id/camera_right_bg_2"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/camera_right_bg_2" />
+
+    <ImageView
+        android:id="@+id/camera_btn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginRight="3.3dp"
+        android:src="@drawable/camera_camera_btn_iv"
+        app:layout_constraintBottom_toBottomOf="@+id/camera_right_bg_2"
+        app:layout_constraintRight_toRightOf="@+id/camera_bg2"
+        app:layout_constraintTop_toTopOf="@+id/camera_right_bg_2" />
+
+    <RadioGroup
+        android:id="@+id/camera_switch_radioGroup"
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        android:orientation="vertical"
+        app:layout_constraintBottom_toBottomOf="@+id/camera_guideline_5"
+        app:layout_constraintLeft_toLeftOf="@+id/camera_guideline_3"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/camera_guideline_4">
+        <RadioButton
+            android:id="@+id/camera_video_record_btn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/camera_switch_video_record_btn"
+            android:button="@null" />
+       <Space
+           android:layout_width="wrap_content"
+           android:layout_height="0dp"
+           android:layout_weight="1"/>
+        <RadioButton
+            android:id="@+id/camera_switch_picture_btn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/camera_switch_picture_btn"
+            android:button="@null"
+            android:checked="true" />
+    </RadioGroup>
+
+
+    <ImageView
+        android:id="@+id/camera_show_bg"
+        android:layout_width="72dp"
+        android:layout_height="72dp"
+        android:layout_marginBottom="8.7dp"
+        android:src="@drawable/camera_show_bg"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintLeft_toLeftOf="@+id/camera_right_top_controller"
+        app:layout_constraintRight_toRightOf="@+id/camera_right_top_controller" />
+
+    <ImageView
+        android:id="@+id/camera_show"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_margin="4dp"
+        android:src="@drawable/camera_show_default_iv"
+        app:layout_constraintBottom_toBottomOf="@+id/camera_show_bg"
+        app:layout_constraintLeft_toLeftOf="@+id/camera_show_bg"
+        app:layout_constraintRight_toRightOf="@+id/camera_show_bg"
+        app:layout_constraintTop_toTopOf="@+id/camera_show_bg" />
+
+
+    <TextView
+        android:id="@+id/camera_video_record_tip_bg"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="15.3dp"
+        android:visibility="invisible"
+        android:background="@drawable/camera_video_record_tip_bg"
+        app:layout_constraintBottom_toBottomOf="@+id/camera_video_record_tip_time_tv"
+        app:layout_constraintLeft_toLeftOf="@+id/camera_guideline_1"
+        app:layout_constraintTop_toTopOf="@+id/camera_video_record_tip_time_tv" />
+
+    <TextView
+        android:id="@+id/camera_video_record_tip_time_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="13.3dp"
+        android:layout_marginTop="12.7dp"
+        android:text="00:00"
+        android:textColor="@android:color/white"
+        android:visibility="invisible"
+        android:textSize="36sp"
+        app:layout_constraintLeft_toRightOf="@+id/camera_video_record_tip_bg"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <android.support.constraint.Guideline
+        android:id="@+id/camera_guideline_1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.0797" />
+
+    <android.support.constraint.Guideline
+        android:id="@+id/camera_guideline_2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.8725" />
+
+    <android.support.constraint.Guideline
+        android:id="@+id/camera_guideline_3"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.8953" />
+
+    <android.support.constraint.Guideline
+        android:id="@+id/camera_guideline_4"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent="0.1958" />
+
+    <android.support.constraint.Guideline
+        android:id="@+id/camera_guideline_5"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent="0.8041" />
+
+</android.support.constraint.ConstraintLayout>
