@@ -53,11 +53,9 @@ public class WorkThreadUtils {
             e.printStackTrace();
         }
     }
-
     public HandlerThread getBackgroundThread() {
         return mBackgroundThread;
     }
-
     public Handler getBackgroundHandler() {
         return mBackgroundHandler;
     }

@@ -21,13 +21,16 @@ import com.xingen.camera.contract.CameraContract;
 import com.xingen.camera.glide.GlideLoader;
 import com.xingen.camera.mode.Constant;
 import com.xingen.camera.utils.animator.AnimatorBuilder;
+import com.xingen.camera.view.widget.VerticalProgressBarLayout;
 import com.xingen.camera.widget.AutoFitTextureView;
 
 /**
  * Created by ${xinGen} on 2017/10/19.
  */
 
-public class CameraFragment extends Fragment implements CameraContract.View<CameraContract.Presenter>, View.OnClickListener, RadioGroup.OnCheckedChangeListener {
+public class CameraFragment extends Fragment implements CameraContract.View<CameraContract.Presenter>
+        , View.OnClickListener, RadioGroup.OnCheckedChangeListener
+        ,VerticalProgressBarLayout.VerticalMoveResultListener{
     public static final String TAG = CameraFragment.class.getSimpleName();
 
     public static CameraFragment newInstance() {
@@ -49,19 +52,21 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
 
     private ImageView show_result_iv;
     private ImageView controller_state_iv;
-
+private  VerticalProgressBarLayout verticalProgressBarLayout;
     private void initView() {
         this.textureView = rootView.findViewById(R.id.camera_auto_fit_texture_view);
         this.show_result_iv = rootView.findViewById(R.id.camera_show);
         this.show_record_tv = rootView.findViewById(R.id.camera_video_record_tip_time_tv);
         this.record_tip_circle = rootView.findViewById(R.id.camera_video_record_tip_bg);
         this.rootView.findViewById(R.id.camera_btn).setOnClickListener(this);
+        this.verticalProgressBarLayout=rootView.findViewById(R.id.camera_vertical_progress_bar);
         this.controller_state_iv = this.rootView.findViewById(R.id.camera_right_top_controller);
         this.controller_state_iv.setTag(CameraContract.View.MODE_RECORD_FINISH);
         this.controller_state_iv.setOnClickListener(this);
         this.show_result_iv.setOnClickListener(this);
         ((RadioGroup) this.rootView.findViewById(R.id.camera_switch_radioGroup)).setOnCheckedChangeListener(this);
         ((RadioGroup) this.rootView.findViewById(R.id.camera_direction_radioGroup)).setOnCheckedChangeListener(this);
+        this.verticalProgressBarLayout.setVerticalMoveResultListener(this);
     }
 
     @Override
@@ -187,6 +192,13 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
             default:
 
                 break;
+        }
+    }
+
+    @Override
+    public void moveDistance(float verticalBias) {
+        if (presenter!=null){
+            presenter.setManualFocus(verticalBias);
         }
     }
 }

@@ -15,9 +15,8 @@ import com.xingen.camera.utils.thread.WorkThreadUtils;
  */
 
 public class Camera2Manager {
-
     /**
-     * 前后摄像头
+     * 前,后摄像头
      */
     public static final  int CAMERA_DIRECTION_FRONT=4;
     public static  final  int CAMERA_DIRECTION_BACK=5;
@@ -28,17 +27,28 @@ public class Camera2Manager {
     private BaseCamera2Operator videoRecordOperator;
     private BaseCamera2Operator currentOperator;
     private int currentDirection;
+    /**
+     * 是否手动调焦
+     */
+    private boolean isManualFocus;
+    /**
+     * 焦距比例,手动调焦的模式下
+     */
+    private float zoomProportion;
 
     public Camera2Manager(Context context, WorkThreadUtils workThreadManager) {
         this.context = context;
         this.workThreadManager = workThreadManager;
         //默认使用后摄像头
-        this.currentDirection=CAMERA_DIRECTION_BACK;
-        this.pictureOperator = new PictureOperater(this.workThreadManager);
-        this.videoRecordOperator = new VideoRecordOperator(this.workThreadManager);
+        this.currentDirection=CAMERA_DIRECTION_FRONT;
+        this.pictureOperator = new PictureOperater(this);
+        this.videoRecordOperator = new VideoRecordOperator(this);
         setCurrentCameraDirection(this.currentDirection);
         //默认拍照模式
         this.currentOperator = pictureOperator;
+        //是否开启手动调焦
+        this.isManualFocus=false;
+        this.zoomProportion =0;
     }
     public void onResume(TextureView textureView) {
         this.videoRecordOperator.setWeakReference(textureView);
@@ -93,7 +103,6 @@ public class Camera2Manager {
         this.currentOperator.startOperate();
     }
      public void switchCameraDirection(int direction){
-
          //相同摄像头方向，不进行操作
          if (currentDirection== direction){
                return;
@@ -110,4 +119,32 @@ public class Camera2Manager {
          this.currentOperator.switchCameraDirectionOperate();
      }
 
+    /**
+     * 设置焦距比例，从设置焦距值
+     * @param zoomProportion
+     */
+    public void setZoomProportion(float zoomProportion) {
+        this.zoomProportion = zoomProportion;
+        this.currentOperator.notifyFocusState();
+    }
+    public float getZoomProportion() {
+        return zoomProportion;
+    }
+
+    public WorkThreadUtils getWorkThreadManager() {
+        return workThreadManager;
+    }
+
+    public boolean isManualFocus() {
+        return isManualFocus;
+    }
+
+    public void setManualFocus(boolean manualFocus) {
+        this.isManualFocus = manualFocus;
+        this.currentOperator.notifyFocusState();
+    }
+
+    public Context getContext() {
+        return context;
+    }
 }

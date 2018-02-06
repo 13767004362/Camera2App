@@ -24,7 +24,7 @@ public class ObservableBuilder {
      * @param filePath2
      * @return
      */
-    public static Observable<String> createMergeMuiltFile(Context context,final String filePath1, final String filePath2) {
+    public static Observable<String> createMergeMuiltFile(Context context, final String filePath1, final String filePath2) {
         return Observable.create(subscriber -> {
             String newFilePath = FileUtils.mergeMultipleVideoFile(context, filePath1, filePath2);
             subscriber.onNext(newFilePath);
@@ -62,6 +62,35 @@ public class ObservableBuilder {
                 e.printStackTrace();
             } finally {
                 mImage.close();
+                if (null != output) {
+                    try {
+                        output.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+            subscriber.onNext(file.getAbsolutePath());
+        });
+        return observable;
+    }
+
+    /**
+     * 将byte数据写入图片文件中
+     * @param context
+     * @param bytes
+     * @return
+     */
+    public static Observable<String> createWriteCaptureImage(final Context context, final byte[] bytes) {
+        Observable<String> observable = Observable.create(subscriber -> {
+            File file = FileUtils.createPictureDiskFile(context, FileUtils.createBitmapFileName());
+            FileOutputStream output = null;
+            try {
+                output = new FileOutputStream(file);
+                output.write(bytes);
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
                 if (null != output) {
                     try {
                         output.close();

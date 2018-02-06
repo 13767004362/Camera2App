@@ -54,6 +54,12 @@ public interface CameraContract {
          * 重新开始录制
          */
         void restartRecord();
+
+        /**
+         * 设置手动调焦的比例值
+         * @param focusProportion
+         */
+        void setManualFocus(float focusProportion);
     }
 
     interface View<T extends Presenter> {
@@ -88,7 +94,7 @@ public interface CameraContract {
         void switchRecordMode(int mode);
 
         /**
-         * 视频录制的三种状态
+         * 视频录制的三种状态,开始，停止，完成
          */
         int MODE_RECORD_START=1;
         int MODE_RECORD_STOP=2;

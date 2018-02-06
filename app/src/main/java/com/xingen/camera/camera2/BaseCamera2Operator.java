@@ -75,11 +75,12 @@ public abstract class BaseCamera2Operator {
 
 
 
+
     protected Activity getTextureViewContext() {
         return (Activity) getTextureView().getContext();
     }
 
-    public TextureView.SurfaceTextureListener getmSurfaceTextureListener() {
+    public TextureView.SurfaceTextureListener getSurfaceTextureListener() {
         return mSurfaceTextureListener;
     }
     public void setCurrentDirection(int currentDirection) {
@@ -223,6 +224,11 @@ public abstract class BaseCamera2Operator {
      * @param viewHeight
      */
    protected abstract void configureTransform(Activity activity, int viewWidth, int viewHeight);
+
+    /**
+     * 通知调焦情况，发生改变
+     */
+   public abstract  void notifyFocusState();
 
     public interface Camera2ResultCallBack {
         /**

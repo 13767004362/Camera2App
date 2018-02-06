@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.res.Configuration;
 import android.graphics.Matrix;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
@@ -24,7 +25,8 @@ import android.view.TextureView;
 import android.widget.Toast;
 
 import com.xingen.camera.camera2.BaseCamera2Operator;
-import com.xingen.camera.camera2.calculation.Camera2CalculationUtils;
+import com.xingen.camera.camera2.Camera2Manager;
+import com.xingen.camera.camera2.utils.Camera2Utils;
 import com.xingen.camera.utils.file.FileUtils;
 import com.xingen.camera.utils.permissions.PermissionsManager;
 import com.xingen.camera.utils.rxjava.ObservableBuilder;
@@ -36,6 +38,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 
 import rx.Observable;
@@ -84,9 +87,12 @@ public class VideoRecordOperator extends BaseCamera2Operator {
     private String mNextVideoAbsolutePath;
     private CompositeSubscription compositeSubscription;
 
-    public VideoRecordOperator(WorkThreadUtils workThreadUtils) {
-        this.workThreadManager = workThreadUtils;
-        this.oldVideoPath = new ArrayList<>();
+    private Camera2Manager camera2Manager;
+
+    public VideoRecordOperator(Camera2Manager camera2Manager) {
+        this.camera2Manager = camera2Manager;
+        this.workThreadManager = camera2Manager.getWorkThreadManager();
+        this.oldVideoPath = new CopyOnWriteArrayList<>();
         this.compositeSubscription = new CompositeSubscription();
     }
 
@@ -95,6 +101,10 @@ public class VideoRecordOperator extends BaseCamera2Operator {
 
     }
 
+    /**
+     * 开始相机的预览界面，创建一个预览的session会话。
+     *
+     */
     @Override
     public void startPreView() {
         TextureView mTextureView = getTextureView();
@@ -143,8 +153,6 @@ public class VideoRecordOperator extends BaseCamera2Operator {
         }
         try {
             setUpCaptureRequestBuilder(mPreviewBuilder);
-     /*       HandlerThread thread = new HandlerThread("CameraPreview");
-            thread.start();*/
             mPreviewSession.setRepeatingRequest(mPreviewBuilder.build(), null, workThreadManager.getBackgroundHandler());
         } catch (CameraAccessException e) {
             e.printStackTrace();
@@ -154,6 +162,7 @@ public class VideoRecordOperator extends BaseCamera2Operator {
     private void setUpCaptureRequestBuilder(CaptureRequest.Builder builder) {
         builder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
     }
+
 
     /**
      * 为相机创建一个CameraCaptureSession
@@ -179,6 +188,7 @@ public class VideoRecordOperator extends BaseCamera2Operator {
             startRecordingVideo();
         }
     }
+
     @Override
     public void switchCameraDirectionOperate() {
 
@@ -187,7 +197,7 @@ public class VideoRecordOperator extends BaseCamera2Operator {
     /**
      * 停止录制
      */
-    private void stopRecordingVideo(final  boolean isFinish) {
+    private void stopRecordingVideo(final boolean isFinish) {
 
         // UI
         mIsRecordingVideo = false;
@@ -212,7 +222,7 @@ public class VideoRecordOperator extends BaseCamera2Operator {
                     mMediaRecorder.stop();
                     mMediaRecorder.reset();
                     if (isFinish) {
-                        isRecordGonging=false;
+                        isRecordGonging = false;
                         Log.i(TAG, "stopRecordingVideo 录制完成");
                         if (camera2VideoRecordCallBack != null) {
                             camera2VideoRecordCallBack.finishRecord();
@@ -283,7 +293,7 @@ public class VideoRecordOperator extends BaseCamera2Operator {
     }
 
     /**
-     * 开始视频录制
+     * 开始视频录制，创建一个录像的session会话。
      */
     private void startRecordingVideo() {
 
@@ -299,9 +309,9 @@ public class VideoRecordOperator extends BaseCamera2Operator {
             SurfaceTexture texture = mTextureView.getSurfaceTexture();
             assert texture != null;
             texture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
+            //创建录制的session会话
             mPreviewBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
             List<Surface> surfaces = new ArrayList<>();
-
             // 为相机预览设置Surface
             Surface previewSurface = new Surface(texture);
             surfaces.add(previewSurface);
@@ -322,7 +332,7 @@ public class VideoRecordOperator extends BaseCamera2Operator {
                     Log.i(TAG, " startRecordingVideo  正式开始录制 ");
                     getTextureViewContext().runOnUiThread(() -> {
                         mIsRecordingVideo = true;
-                        isRecordGonging =true;
+                        isRecordGonging = true;
                         mMediaRecorder.start();
                         if (camera2VideoRecordCallBack != null) {
                             camera2VideoRecordCallBack.startRecord();
@@ -413,15 +423,45 @@ public class VideoRecordOperator extends BaseCamera2Operator {
             mCameraOpenCloseLock.release();
         }
     }
-    private  boolean isRecordGonging =false;
+
+    private boolean isRecordGonging = false;
 
     /**
      * 是否在进行视频录制，录制状态，包含进行中，暂停中。
+     *
      * @return
      */
-    public  boolean isVideoRecord(){
+    public boolean isVideoRecord() {
         return isRecordGonging;
     }
+
+    private Rect zoomRect;
+
+    /**
+     * 更新缩放，数字调焦
+     *
+     * @param currentZoom
+     */
+    private void updateZoomRect(float currentZoom) {
+        try {
+            Rect rect = characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
+            if (rect == null) {
+                return;
+            }
+            zoomRect = Camera2Utils.createZoomRect(rect, currentZoom);
+            if (zoomRect == null) {
+                return;
+            }
+            Log.i(TAG, "zoom对应的 rect对应的区域 " + zoomRect.left + " " + zoomRect.right + " " + zoomRect.top + " " + zoomRect.bottom);
+            mPreviewBuilder.set(CaptureRequest.SCALER_CROP_REGION, zoomRect);
+            updatePreview();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private float maxZoom;
+    private CameraCharacteristics characteristics;
 
     @Override
     protected void openCamera(Activity activity, int width, int height) {
@@ -438,16 +478,20 @@ public class VideoRecordOperator extends BaseCamera2Operator {
                     throw new RuntimeException("锁住相机开启，超时");
                 }
                 //通常情况下，后摄像头是0，前摄像头是1
-                String cameraId = manager.getCameraIdList()[currentDirection==CameraCharacteristics.LENS_FACING_BACK?0:1];
+                String cameraId = manager.getCameraIdList()[currentDirection == CameraCharacteristics.LENS_FACING_BACK ? 0 : 1];
                 // 计算相机预览和视频录制的的Size
-                CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraId);
+                characteristics = manager.getCameraCharacteristics(cameraId);
                 StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
                 mSensorOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
                 if (map == null) {
                     throw new RuntimeException("Cannot get available preview/video sizes");
                 }
-                mVideoSize = Camera2CalculationUtils.chooseVideoSize(map.getOutputSizes(MediaRecorder.class));
-                mPreviewSize = Camera2CalculationUtils.chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class),
+                Float maxZoomValue = Camera2Utils.getMaxZoom(characteristics);
+                if (maxZoomValue != null) {
+                    maxZoom = maxZoomValue;
+                }
+                mVideoSize = Camera2Utils.chooseVideoSize(map.getOutputSizes(MediaRecorder.class));
+                mPreviewSize = Camera2Utils.chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class),
                         width, height, mVideoSize);
 
                 int orientation = activity.getResources().getConfiguration().orientation;
@@ -490,6 +534,12 @@ public class VideoRecordOperator extends BaseCamera2Operator {
             matrix.postRotate(90 * (rotation - 2), centerX, centerY);
         }
         textureView.setTransform(matrix);
+    }
+
+    @Override
+    public void notifyFocusState() {
+        float currentZoom = camera2Manager.getZoomProportion() * maxZoom;
+        updateZoomRect(currentZoom);
     }
 
     private Camera2VideoRecordCallBack camera2VideoRecordCallBack;

@@ -2,24 +2,29 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.xingen.camera">
 
-
+    <!--相机权限-->
     <uses-permission android:name="android.permission.CAMERA" />
-    <!-- 拍照-->
+    <!--使用摄像头硬件功能-->
     <uses-feature android:name="android.hardware.camera" />
+    <!--自动对焦功能-->
     <uses-feature android:name="android.hardware.camera.autofocus" />
-    <!-- 录制视频 -->
-    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+    <!--闪光灯功能-->
+    <uses-feature android:name="android.hardware.camera.flash" />
+    <!-- 录音权限 -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- 读写权限-->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 
     <application
+        android:name="com.xingen.camera.base.BaseApplication"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:name="com.xingen.camera.base.BaseApplication"
         android:theme="@style/AppTheme">
-        <activity android:name="com.xingen.camera.MainActivity"
+        <activity
+            android:name="com.xingen.camera.MainActivity"
             android:screenOrientation="landscape">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -27,9 +32,9 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name="com.xingen.camera.PictureActivity"
-            android:screenOrientation="landscape">
-        </activity>
+        <activity
+            android:name="com.xingen.camera.PictureActivity"
+            android:screenOrientation="landscape"></activity>
     </application>
 
 </manifest>

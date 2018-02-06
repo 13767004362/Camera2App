@@ -26,22 +26,26 @@
     <RadioGroup
         android:id="@+id/camera_direction_radioGroup"
         android:layout_width="wrap_content"
-
         android:orientation="vertical"
-        android:gravity="center"
         app:layout_constraintLeft_toLeftOf="parent"
         android:layout_marginTop="7.3dp"
         app:layout_constraintTop_toTopOf="parent"
+        android:gravity="center_horizontal"
         app:layout_constraintRight_toRightOf="@+id/camera_bg1"
         android:background="@drawable/camera_direction_bg"
-        android:layout_height="98dp">
-
+        android:paddingBottom="1dp"
+        android:paddingTop="1dp"
+        android:layout_height="75dp">
         <RadioButton
             android:id="@+id/camera_direction_front"
             android:layout_width="wrap_content"
             android:button="@null"
             android:background="@drawable/camera_direction_front"
             android:layout_height="wrap_content" />
+        <Space
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:layout_weight="1"/>
         <RadioButton
             android:id="@+id/camera_direction_back"
             android:layout_width="wrap_content"

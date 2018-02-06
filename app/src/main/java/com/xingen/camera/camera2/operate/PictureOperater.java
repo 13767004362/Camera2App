@@ -6,6 +6,7 @@ import android.content.res.Configuration;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
 import android.graphics.Point;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
@@ -27,7 +28,8 @@ import android.view.Surface;
 import android.view.TextureView;
 
 import com.xingen.camera.camera2.BaseCamera2Operator;
-import com.xingen.camera.camera2.calculation.Camera2CalculationUtils;
+import com.xingen.camera.camera2.Camera2Manager;
+import com.xingen.camera.camera2.utils.Camera2Utils;
 import com.xingen.camera.camera2.compare.CompareSizeByArea;
 import com.xingen.camera.utils.permissions.PermissionsManager;
 import com.xingen.camera.utils.rxjava.ObservableBuilder;
@@ -95,12 +97,26 @@ public class PictureOperater extends BaseCamera2Operator {
      */
     private final int LOCK_TIME = 2500;
 
-    public PictureOperater(WorkThreadUtils workThreadManager) {
-        this.workThreadManager = workThreadManager;
+    private Camera2Manager camera2Manager;
+
+    /**
+     * 最小的焦距
+     */
+    private float minimalFocalDistance = 0;
+    /**
+     * 最大的数字变焦值，缩放值
+     */
+    private float maxZoom = 0;
+
+
+    public PictureOperater(Camera2Manager camera2Manager) {
+        this.camera2Manager = camera2Manager;
+        this.workThreadManager = camera2Manager.getWorkThreadManager();
     }
+
     @Override
     public void startOperate() {
-        Log.i(TAG," 打开相机的操作  startOperate ");
+        //  Log.i(TAG, " 打开相机的操作  startOperate ");
         TextureView textureView = getTextureView();
         /**
          *当打开锁屏后，TextureView是可用的。
@@ -114,11 +130,13 @@ public class PictureOperater extends BaseCamera2Operator {
             textureView.setSurfaceTextureListener(mSurfaceTextureListener);
         }
     }
+
     @Override
     public void stopOperate() {
-        Log.i(TAG," 关闭相机的操作 ");
+        //   Log.i(TAG, " 关闭相机的操作 ");
         closeCamera();
     }
+
     @Override
     public void openCamera(Activity activity, int width, int height) {
         if (PermissionsManager.checkCameraPermission(activity)) {
@@ -141,7 +159,7 @@ public class PictureOperater extends BaseCamera2Operator {
 
     @Override
     public void closePreviewSession() {
-        if ( mCaptureSession != null) {
+        if (mCaptureSession != null) {
             mCaptureSession.close();
             mCaptureSession = null;
         }
@@ -239,7 +257,7 @@ public class PictureOperater extends BaseCamera2Operator {
     }
 
     /**
-     * 为相机预览，创建一个CameraCaptureSession对象
+     * 相机开始预览，创建一个CameraCaptureSession对象
      */
     private void createCameraPreviewSession() {
         try {
@@ -258,28 +276,28 @@ public class PictureOperater extends BaseCamera2Operator {
             mPreviewRequestBuilder.addTarget(surface);
 
             // 为相机预览，创建一个CameraCaptureSession对象
-            mCameraDevice.createCaptureSession(Arrays.asList(surface, imageReader.getSurface()),
-                    new CameraCaptureSession.StateCallback() {
-                        @Override
-                        public void onConfigured(@NonNull CameraCaptureSession cameraCaptureSession) {
-                            // 相机已经关闭
-                            if (null == mCameraDevice) {
-                                return;
-                            }
-                            //当cameraCaptureSession已经准备完成，开始显示预览界面
-                            mCaptureSession = cameraCaptureSession;
-                            setCameraCaptureSession();
-                        }
+            mCameraDevice.createCaptureSession(Arrays.asList(surface, imageReader.getSurface()), new CameraCaptureSession.StateCallback() {
+                @Override
+                public void onConfigured(@NonNull CameraCaptureSession cameraCaptureSession) {
+                    // 相机已经关闭
+                    if (null == mCameraDevice) {
+                        return;
+                    }
+                    //当cameraCaptureSession已经准备完成，开始显示预览界面
+                    mCaptureSession = cameraCaptureSession;
+                    setCameraCaptureSession();
+                }
 
-                        @Override
-                        public void onConfigureFailed(@NonNull CameraCaptureSession cameraCaptureSession) {
-                            //配置失败
-                        }
-                    }, null);
+                @Override
+                public void onConfigureFailed(@NonNull CameraCaptureSession cameraCaptureSession) {
+                    //配置失败
+                }
+            }, null);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
     }
+
 
     /**
      * 设置CameraCaptureSession的特征:
@@ -288,17 +306,121 @@ public class PictureOperater extends BaseCamera2Operator {
      */
     private void setCameraCaptureSession() {
         try {
-            //为相机预览设置连续对焦。
-            mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+            setFocus(mPreviewRequestBuilder);
             //若是需要则开启，闪光灯
             setAutoFlash(mPreviewRequestBuilder);
             // 最后，开启相机预览界面的显示
             mPreviewRequest = mPreviewRequestBuilder.build();
+
             //为CameraCaptureSession设置复用的CaptureRequest。
             mCaptureSession.setRepeatingRequest(mPreviewRequest, mCaptureCallback, workThreadManager.getBackgroundHandler());
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
+    }
+
+    private float currentZoom;
+
+    @Override
+    public void notifyFocusState() {
+        if (mPreviewRequestBuilder != null) {
+            try {
+                currentZoom = maxZoom * camera2Manager.getZoomProportion();
+                setZoom(currentZoom);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private Rect zoomRect;
+
+    private void setZoom(float currentZoom) {
+        try {
+          //  mPreviewRequestBuilder.set(CaptureRequest.LENS_FOCAL_LENGTH, currentZoom);
+            zoomRect=createZoomReact();
+            if (zoomRect==null){
+                Log.i(TAG, "相机不支持 zoom " );
+                return ;
+            }
+            mPreviewRequestBuilder.set(CaptureRequest.SCALER_CROP_REGION,zoomRect);
+            mPreviewRequest = mPreviewRequestBuilder.build();
+            Log.i(TAG, " 最大缩放值 " + maxZoom + " 设置缩放值 " + currentZoom );
+            //为CameraCaptureSession设置复用的CaptureRequest。
+            mCaptureSession.setRepeatingRequest(mPreviewRequest, mCaptureCallback, workThreadManager.getBackgroundHandler());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 计算出zoom所对应的裁剪区域
+     * @return
+     */
+    private Rect createZoomReact() {
+        if (currentZoom==0){
+            return null;
+        }
+        try {
+            Rect rect = cameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
+            if (rect==null){
+                return null;
+            }
+            zoomRect =Camera2Utils.createZoomRect(rect,currentZoom);
+            Log.i(TAG, "zoom对应的 rect对应的区域 " + zoomRect.left + " " + zoomRect.right + " " + zoomRect.top + " " + zoomRect.bottom);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return zoomRect;
+    }
+
+    /**
+     * -
+     * 设置调焦方式：自动连续对焦还是手动调焦
+     *
+     * @param requestBuilder
+     */
+    private void setFocus(CaptureRequest.Builder requestBuilder) {
+        if (camera2Manager.isManualFocus()) {
+            float focusDistance = minimum_focus_distance * camera2Manager.getZoomProportion();
+            setManualFocus(requestBuilder, focusDistance);
+        } else {
+            setAutoFocus(requestBuilder);
+        }
+    }
+
+    /**
+     * 设置连续自动对焦
+     *
+     * @param requestBuilder
+     */
+    private void setAutoFocus(CaptureRequest.Builder requestBuilder) {
+        if (requestBuilder != null) {
+            //为相机预览设置连续对焦。
+            requestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+        }
+    }
+
+    /**
+     * 设置手动对焦，设置焦距值
+     *
+     * @param requestBuilder
+     */
+    private void setManualFocus(CaptureRequest.Builder requestBuilder, float distance) {
+        //若是机器不支持焦距设置，则需要检查。
+        try {
+            if (requestBuilder != null) {
+                //先关闭自动对焦的模式
+                requestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_OFF);
+                requestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CameraMetadata.CONTROL_AF_MODE_OFF);
+                Log.i(TAG, "手动调焦的 " + distance + " 最大范围值是 " + minimum_focus_distance);
+                //设置焦距值
+                requestBuilder.set(CaptureRequest.LENS_FOCUS_DISTANCE, distance);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
     }
 
     /**
@@ -419,6 +541,8 @@ public class PictureOperater extends BaseCamera2Operator {
     /**
      * 拍照一个静态的图片
      * ,当在CaptureCallback监听器响应的时候调用该方法。
+     * <p>
+     * 当数字调焦缩放的时候，在写入图片数中也要设置。
      */
     private void captureStillPicture() {
         try {
@@ -428,13 +552,21 @@ public class PictureOperater extends BaseCamera2Operator {
             }
             // 创建一个拍照的CaptureRequest.Builder
             final CaptureRequest.Builder captureBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
+
             captureBuilder.addTarget(imageReader.getSurface());
             // 使用相同的AE和AF模式作为预览.
-            captureBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+             captureBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+
+            //让相机中缩放效果和图片保持一致
+            //   zoomRect=createZoomReact();
+            if (zoomRect != null) {
+                Log.i(TAG," 拍照 添加裁剪区域 "+zoomRect.toString());
+                captureBuilder.set(CaptureRequest.SCALER_CROP_REGION, zoomRect);
+            }
             setAutoFlash(captureBuilder);
             // 方向
             int rotation = activity.getWindowManager().getDefaultDisplay().getRotation();
-            captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, Camera2CalculationUtils.getOrientation(ORIENTATIONS, mSensorOrientation, rotation));
+            captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, Camera2Utils.getOrientation(ORIENTATIONS, mSensorOrientation, rotation));
             CameraCaptureSession.CaptureCallback captureCallback = new CameraCaptureSession.CaptureCallback() {
                 @Override
                 public void onCaptureCompleted(@NonNull CameraCaptureSession session
@@ -480,19 +612,29 @@ public class PictureOperater extends BaseCamera2Operator {
     }
 
     /**
+     * 获取到最大的焦距值
+     */
+    private float minimum_focus_distance;
+    /**
+     * 获取相机参数的类
+     */
+    private CameraCharacteristics cameraCharacteristics;
+
+    /**
      * 设置Camera的相关参数变量，长、宽，且返回相机的Id.
      *
      * @param width
      * @param height
      */
     private void setUpCameraOutputs(Activity activity, int width, int height) {
+        //  Log.i(TAG," 检查是否支持camera2 "+ Camera2Utils.hasCamera2(getTextureViewContext()));
         CameraManager manager = (CameraManager) getTextureViewContext().getSystemService(Context.CAMERA_SERVICE);
         try {
             //获取到可用的相机
             for (String cameraId : manager.getCameraIdList()) {
                 //获取到每个相机的参数对象，包含前后摄像头，分辨率等
-                CameraCharacteristics cameraCharacteristics = manager.getCameraCharacteristics(cameraId);
-                if (!Camera2CalculationUtils.matchCameraDirection(cameraCharacteristics,currentDirection)){
+                cameraCharacteristics = manager.getCameraCharacteristics(cameraId);
+                if (!Camera2Utils.matchCameraDirection(cameraCharacteristics, currentDirection)) {
                     continue;
                 }
                 //存储流配置类
@@ -501,7 +643,18 @@ public class PictureOperater extends BaseCamera2Operator {
                     continue;
                 }
                 //检查设备,是否支持自动对焦
-                mAutoFocusSupported = Camera2CalculationUtils.checkAutoFocus(cameraCharacteristics);
+                mAutoFocusSupported = Camera2Utils.checkAutoFocus(cameraCharacteristics);
+                //获取最小焦距值。
+                Float minFocalDistance = Camera2Utils.getMinimumFocusDistance(cameraCharacteristics);
+                if (minFocalDistance != null) {
+                    minimum_focus_distance = minFocalDistance;
+                }
+
+                Float maxZoomValue = Camera2Utils.getMaxZoom(cameraCharacteristics);
+                if (maxZoomValue != null) {
+                    maxZoom = maxZoomValue;
+                }
+                Log.i(TAG, (currentDirection == CameraCharacteristics.LENS_FACING_BACK ? "后" : "前") + " 摄像头 " + " 是否支持自动对焦 " + mAutoFocusSupported + " 获取到焦距的最大值 " + minimum_focus_distance + " 最大的缩放值 " + maxZoom);
                 //对于静态图片，使用可用的最大值来拍摄。
                 Size largest = Collections.max(Arrays.asList(map.getOutputSizes(ImageFormat.JPEG)), new CompareSizeByArea());
                 //设置ImageReader,将大小，图片格式
@@ -547,8 +700,7 @@ public class PictureOperater extends BaseCamera2Operator {
                 if (maxPreviewHeight > MAX_PREVIEW_HEIGHT) {
                     maxPreviewHeight = MAX_PREVIEW_HEIGHT;
                 }
-
-                mPreviewSize = Camera2CalculationUtils.chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class),
+                mPreviewSize = Camera2Utils.chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class),
                         rotatedPreviewWidth, rotatedPreviewHeight, maxPreviewWidth,
                         maxPreviewHeight, largest, new CompareSizeByArea());
                 // 计算出来的预览大小，设置成TextureView宽高.
@@ -564,18 +716,17 @@ public class PictureOperater extends BaseCamera2Operator {
                 Boolean available = cameraCharacteristics.get(CameraCharacteristics.FLASH_INFO_AVAILABLE);
                 mFlashSupported = available == null ? false : available;
                 mCameraId = cameraId;
-                Log.i(TAG," 根据相机的前后摄像头"+mCameraId+" 方向是："+currentDirection);
+                // Log.i(TAG, " 根据相机的前后摄像头" + mCameraId + " 方向是：" + currentDirection);
                 return;
             }
         } catch (Exception e) {
             e.printStackTrace();
             //不支持该设备
             if (e instanceof NullPointerException) {
-                ToastUtils.showToast(appContext,"设备不支持Camera2 API");
+                ToastUtils.showToast(appContext, "设备不支持Camera2 API");
             }
         }
     }
-
 
 
 }

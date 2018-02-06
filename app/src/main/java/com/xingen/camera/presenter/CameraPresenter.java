@@ -143,6 +143,10 @@ public class CameraPresenter implements CameraContract.Presenter, BaseCamera2Ope
     }
 
     @Override
+    public void setManualFocus(float focusProportion) {
+       camera2Manager.setZoomProportion(focusProportion);
+    }
+    @Override
     public void finishRecord() {
         this.view.switchRecordMode(CameraContract.View.MODE_RECORD_FINISH);
         if (cycleTimeSubscription != null) {
