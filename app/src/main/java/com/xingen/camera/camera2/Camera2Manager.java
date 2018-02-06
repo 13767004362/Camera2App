@@ -40,7 +40,7 @@ public class Camera2Manager {
         this.context = context;
         this.workThreadManager = workThreadManager;
         //默认使用后摄像头
-        this.currentDirection=CAMERA_DIRECTION_FRONT;
+        this.currentDirection=CAMERA_DIRECTION_BACK;
         this.pictureOperator = new PictureOperater(this);
         this.videoRecordOperator = new VideoRecordOperator(this);
         setCurrentCameraDirection(this.currentDirection);
