@@ -1,4 +1,7 @@
 # Camera2App
+
+![image](https://github.com/13767004362/Camera2App/blob/master/app/device-2018-02-06-144135.png)
+
 采用android5.0中Camera2 api+MVP模式开发的一个相机程序。
 
 -----
