@@ -21,7 +21,9 @@ import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.Image;
 import android.media.ImageReader;
+import android.os.Process;
 import android.support.annotation.NonNull;
+import android.text.TextUtils;
 import android.util.Log;
 import android.util.Size;
 import android.view.Surface;
@@ -133,7 +135,7 @@ public class PictureOperater extends BaseCamera2Operator {
 
     @Override
     public void stopOperate() {
-        //   Log.i(TAG, " 关闭相机的操作 ");
+         Log.i(TAG, TAG+" 关闭相机的操作 ");
         closeCamera();
     }
 
@@ -148,6 +150,17 @@ public class PictureOperater extends BaseCamera2Operator {
                 if (!mCameraOpenCloseLock.tryAcquire(LOCK_TIME, TimeUnit.MILLISECONDS)) {
                     throw new RuntimeException("Time out waiting to lock camera opening.");
                 }
+           /*     if (TextUtils.isEmpty(mCameraId)){
+                    ToastUtils.showToast(getTextureViewContext()," 连接相机出错");
+
+                    if (getTextureViewContext() instanceof  Activity){
+                        ((Activity)  getTextureViewContext()).finish();
+                    }else{
+                        //杀死进程，退出
+                         Process.killProcess(Process.myPid());
+                    }
+                    return;
+                }*/
                 manager.openCamera(mCameraId, stateCallback, workThreadManager.getBackgroundHandler());
             } catch (CameraAccessException e) {
                 e.printStackTrace();
@@ -203,6 +216,7 @@ public class PictureOperater extends BaseCamera2Operator {
 
     @Override
     public void cameraClick() {
+
         takePicture();
     }
 
@@ -222,8 +236,7 @@ public class PictureOperater extends BaseCamera2Operator {
                 imageReader = null;
             }
         } catch (InterruptedException e) {
-            throw new RuntimeException("Interrupted while trying to lock camera closi" +
-                    "ng.", e);
+            throw new RuntimeException("Interrupted while trying to lock camera closi" + "ng.", e);
         } finally {
             mCameraOpenCloseLock.release();
         }
@@ -233,9 +246,12 @@ public class PictureOperater extends BaseCamera2Operator {
      * 拍照
      */
     public void takePicture() {
+        ToastUtils.showToast(camera2Manager.getContext()," 客官，请别抖动，正在拍照中。");
         if (mAutoFocusSupported) {
+            Log.i(TAG,TAG+"支持自动调焦，正在锁住焦点");
             lockFocus();
         } else {//设备不支持自动对焦，则直接拍照。
+            Log.i(TAG,TAG+"不支持自动调焦，直接拍照");
             captureStillPicture();
         }
     }
@@ -311,7 +327,6 @@ public class PictureOperater extends BaseCamera2Operator {
             setAutoFlash(mPreviewRequestBuilder);
             // 最后，开启相机预览界面的显示
             mPreviewRequest = mPreviewRequestBuilder.build();
-
             //为CameraCaptureSession设置复用的CaptureRequest。
             mCaptureSession.setRepeatingRequest(mPreviewRequest, mCaptureCallback, workThreadManager.getBackgroundHandler());
         } catch (CameraAccessException e) {
@@ -337,7 +352,6 @@ public class PictureOperater extends BaseCamera2Operator {
 
     private void setZoom(float currentZoom) {
         try {
-          //  mPreviewRequestBuilder.set(CaptureRequest.LENS_FOCAL_LENGTH, currentZoom);
             zoomRect=createZoomReact();
             if (zoomRect==null){
                 Log.i(TAG, "相机不支持 zoom " );
@@ -381,12 +395,13 @@ public class PictureOperater extends BaseCamera2Operator {
      * @param requestBuilder
      */
     private void setFocus(CaptureRequest.Builder requestBuilder) {
-        if (camera2Manager.isManualFocus()) {
+/*        if (camera2Manager.isManualFocus()) {
             float focusDistance = minimum_focus_distance * camera2Manager.getZoomProportion();
             setManualFocus(requestBuilder, focusDistance);
         } else {
-            setAutoFocus(requestBuilder);
-        }
+
+        }*/
+        setAutoFocus(requestBuilder);
     }
 
     /**
@@ -483,6 +498,9 @@ public class PictureOperater extends BaseCamera2Operator {
                         } else {
                             runPrecaptureSequence();
                         }
+                    }else{
+                        mState = STATE_PICTURE_TAKEN;
+                        captureStillPicture();
                     }
                     break;
                 }
@@ -575,8 +593,10 @@ public class PictureOperater extends BaseCamera2Operator {
                     unlockFocus();
                 }
             };
+            //先停止以前的预览状态
             mCaptureSession.stopRepeating();
             mCaptureSession.abortCaptures();
+            //执行拍照状态
             mCaptureSession.capture(captureBuilder.build(), captureCallback, null);
         } catch (CameraAccessException e) {
             e.printStackTrace();
@@ -595,6 +615,7 @@ public class PictureOperater extends BaseCamera2Operator {
             // 恢复正常状态
             mState = STATE_PREVIEW;
             mCaptureSession.setRepeatingRequest(mPreviewRequest, mCaptureCallback, workThreadManager.getBackgroundHandler());
+            Log.i(TAG, TAG+" 拍照完成，释放焦点  unlockFocus() ");
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
@@ -627,7 +648,6 @@ public class PictureOperater extends BaseCamera2Operator {
      * @param height
      */
     private void setUpCameraOutputs(Activity activity, int width, int height) {
-        //  Log.i(TAG," 检查是否支持camera2 "+ Camera2Utils.hasCamera2(getTextureViewContext()));
         CameraManager manager = (CameraManager) getTextureViewContext().getSystemService(Context.CAMERA_SERVICE);
         try {
             //获取到可用的相机

@@ -6,6 +6,7 @@ import android.content.pm.PackageManager;
 import com.xingen.camera.base.BaseApplication;
 import com.xingen.camera.camera2.BaseCamera2Operator;
 import com.xingen.camera.camera2.Camera2Manager;
+import com.xingen.camera.camera2.utils.Camera2Utils;
 import com.xingen.camera.contract.CameraContract;
 import com.xingen.camera.mode.Constant;
 import com.xingen.camera.utils.permissions.PermissionsManager;
@@ -25,14 +26,13 @@ import rx.subscriptions.CompositeSubscription;
  * Created by ${xinGen} on 2017/10/19.
  */
 public class CameraPresenter implements CameraContract.Presenter, BaseCamera2Operator.Camera2ResultCallBack, BaseCamera2Operator.Camera2VideoRecordCallBack {
-    private final String TAG=CameraPresenter.class.getSimpleName();
+    private final String TAG = CameraPresenter.class.getSimpleName();
     private WorkThreadUtils workThreadManager;
     private Camera2Manager camera2Manager;
     private CameraContract.View view;
     private CompositeSubscription compositeSubscription;
     private Context appContext;
     private int currentMode;
-
     public CameraPresenter(CameraContract.View view) {
         this.view = view;
         this.view.setPresenter(this);
@@ -42,6 +42,7 @@ public class CameraPresenter implements CameraContract.Presenter, BaseCamera2Ope
         this.camera2Manager = new Camera2Manager(appContext, this.workThreadManager);
         this.camera2Manager.setCamera2ResultCallBack(this);
         this.camera2Manager.setCameraVideoCallBack(this);
+        //默认，拍照模式
         this.currentMode = Constant.MODE_CAMERA;
     }
 
@@ -54,9 +55,11 @@ public class CameraPresenter implements CameraContract.Presenter, BaseCamera2Ope
         switch (currentMode) {
             //切换到拍照模式
             case Constant.MODE_CAMERA:
+                view.showToast("客官请稍等，正在切换到拍照模式");
                 break;
             //切换到录像模式
             case Constant.MODE_VIDEO_RECORD:
+                view.showToast("客官请稍等，正在切换到录像模式");
                 break;
             default:
                 break;
@@ -66,7 +69,7 @@ public class CameraPresenter implements CameraContract.Presenter, BaseCamera2Ope
 
     @Override
     public void switchCamera(int direction) {
-       this.camera2Manager.switchCameraDirection(direction);
+        this.camera2Manager.switchCameraDirection(direction);
     }
 
     @Override
@@ -74,23 +77,29 @@ public class CameraPresenter implements CameraContract.Presenter, BaseCamera2Ope
         this.workThreadManager.startWorkThread();
         this.camera2Manager.onResume(view.getCameraView());
     }
+
     @Override
     public void onPause() {
         this.camera2Manager.onPause();
         this.workThreadManager.stopBackgroundThread();
     }
+
     @Override
     public void takePictureOrVideo() {
         this.camera2Manager.takePictureOrVideo();
     }
+
     @Override
     public void callBack(Observable<String> result) {
         if (result != null) {
             Subscription subscription = result.subscribeOn(Schedulers.io())
                     .unsubscribeOn(Schedulers.io())
                     .observeOn(AndroidSchedulers.mainThread())
-                    .subscribe(filePath ->
-                                    view.loadPictureResult(filePath)
+                    .subscribe(filePath -> {
+                                //通知图库，用于刷新
+                                Camera2Utils.sendBroadcastNotify(view.getCameraView().getContext(), filePath);
+                                view.loadPictureResult(filePath);
+                            }
                             , throwable -> {
                                 //写入图片到磁盘失败
                                 ToastUtils.showToast(BaseApplication.getInstance(), "写入磁盘失败");
@@ -98,6 +107,7 @@ public class CameraPresenter implements CameraContract.Presenter, BaseCamera2Ope
             this.compositeSubscription.add(subscription);
         }
     }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         switch (requestCode) {
@@ -126,8 +136,10 @@ public class CameraPresenter implements CameraContract.Presenter, BaseCamera2Ope
                 break;
         }
     }
+
     private long time = 0;
     private Subscription cycleTimeSubscription;
+
     @Override
     public void stopRecord() {
         if (cycleTimeSubscription != null) {
@@ -144,8 +156,9 @@ public class CameraPresenter implements CameraContract.Presenter, BaseCamera2Ope
 
     @Override
     public void setManualFocus(float focusProportion) {
-       camera2Manager.setZoomProportion(focusProportion);
+        camera2Manager.setZoomProportion(focusProportion);
     }
+
     @Override
     public void finishRecord() {
         this.view.switchRecordMode(CameraContract.View.MODE_RECORD_FINISH);
@@ -154,6 +167,7 @@ public class CameraPresenter implements CameraContract.Presenter, BaseCamera2Ope
         }
         time = 0;
     }
+
     @Override
     public void startRecord() {
         this.view.switchRecordMode(CameraContract.View.MODE_RECORD_START);

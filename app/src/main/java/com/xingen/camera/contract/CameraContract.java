@@ -94,6 +94,12 @@ public interface CameraContract {
         void switchRecordMode(int mode);
 
         /**
+         * toast提示
+         * @param content
+         */
+        void  showToast(String content);
+
+        /**
          * 视频录制的三种状态,开始，停止，完成
          */
         int MODE_RECORD_START=1;

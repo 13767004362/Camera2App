@@ -21,6 +21,7 @@ import com.xingen.camera.contract.CameraContract;
 import com.xingen.camera.glide.GlideLoader;
 import com.xingen.camera.mode.Constant;
 import com.xingen.camera.utils.animator.AnimatorBuilder;
+import com.xingen.camera.utils.toast.ToastUtils;
 import com.xingen.camera.view.widget.VerticalProgressBarLayout;
 import com.xingen.camera.widget.AutoFitTextureView;
 
@@ -30,9 +31,12 @@ import com.xingen.camera.widget.AutoFitTextureView;
 
 public class CameraFragment extends Fragment implements CameraContract.View<CameraContract.Presenter>
         , View.OnClickListener, RadioGroup.OnCheckedChangeListener
-        ,VerticalProgressBarLayout.VerticalMoveResultListener{
-    public static final String TAG = CameraFragment.class.getSimpleName();
+        , VerticalProgressBarLayout.VerticalMoveResultListener {
 
+    public static final String TAG = CameraFragment.class.getSimpleName();
+    private ImageView show_result_iv;
+    private ImageView controller_state_iv;
+    private VerticalProgressBarLayout verticalProgressBarLayout;
     public static CameraFragment newInstance() {
         CameraFragment cameraFragment = new CameraFragment();
         return cameraFragment;
@@ -50,16 +54,17 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
         return this.rootView;
     }
 
-    private ImageView show_result_iv;
-    private ImageView controller_state_iv;
-private  VerticalProgressBarLayout verticalProgressBarLayout;
+    @Override
+    public void showToast(String content) {
+        ToastUtils.showToastRunUIThread(getActivity(),content);
+    }
     private void initView() {
         this.textureView = rootView.findViewById(R.id.camera_auto_fit_texture_view);
         this.show_result_iv = rootView.findViewById(R.id.camera_show);
         this.show_record_tv = rootView.findViewById(R.id.camera_video_record_tip_time_tv);
         this.record_tip_circle = rootView.findViewById(R.id.camera_video_record_tip_bg);
         this.rootView.findViewById(R.id.camera_btn).setOnClickListener(this);
-        this.verticalProgressBarLayout=rootView.findViewById(R.id.camera_vertical_progress_bar);
+        this.verticalProgressBarLayout = rootView.findViewById(R.id.camera_vertical_progress_bar);
         this.controller_state_iv = this.rootView.findViewById(R.id.camera_right_top_controller);
         this.controller_state_iv.setTag(CameraContract.View.MODE_RECORD_FINISH);
         this.controller_state_iv.setOnClickListener(this);
@@ -96,10 +101,12 @@ private  VerticalProgressBarLayout verticalProgressBarLayout;
     public TextureView getCameraView() {
         return textureView;
     }
-    protected  String filePath;
+
+    protected String filePath;
+
     @Override
     public void loadPictureResult(String filePath) {
-        this.filePath=filePath;
+        this.filePath = filePath;
         GlideLoader.loadNetWorkResource(getActivity(), filePath, show_result_iv);
     }
 
@@ -123,8 +130,8 @@ private  VerticalProgressBarLayout verticalProgressBarLayout;
                 break;
             //查看大图
             case R.id.camera_show:
-                if (!TextUtils.isEmpty(filePath)){
-                    PictureActivity.openActivity(getActivity(),filePath);
+                if (!TextUtils.isEmpty(filePath)) {
+                    PictureActivity.openActivity(getActivity(), filePath);
                 }
                 break;
             default:
@@ -160,6 +167,7 @@ private  VerticalProgressBarLayout verticalProgressBarLayout;
                 break;
             //录制完成
             case CameraContract.View.MODE_RECORD_FINISH:
+               this.show_record_tv.setText("");
                 this.show_record_tv.setVisibility(View.GONE);
                 this.record_tip_circle.setVisibility(View.GONE);
                 this.controller_state_iv.setImageResource(R.drawable.camera_init_iv);
@@ -197,7 +205,7 @@ private  VerticalProgressBarLayout verticalProgressBarLayout;
 
     @Override
     public void moveDistance(float verticalBias) {
-        if (presenter!=null){
+        if (presenter != null) {
             presenter.setManualFocus(verticalBias);
         }
     }

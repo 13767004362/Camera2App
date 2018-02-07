@@ -9,6 +9,7 @@ import com.xingen.camera.camera2.operate.PictureOperater;
 import com.xingen.camera.camera2.operate.VideoRecordOperator;
 import com.xingen.camera.mode.Constant;
 import com.xingen.camera.utils.thread.WorkThreadUtils;
+import com.xingen.camera.utils.toast.ToastUtils;
 
 /**
  * Created by ${xingen} on 2017/10/20.
@@ -75,7 +76,8 @@ public class Camera2Manager {
      */
     private void setCurrentCameraDirection(int currentDirection){
         int direction=(currentDirection==CAMERA_DIRECTION_BACK)? CameraCharacteristics.LENS_FACING_BACK:CameraCharacteristics.LENS_FACING_FRONT;
-        Log.i(TAG,"setCurrentCameraDirection "+direction);
+        Log.i(TAG,TAG+" 切换摄像头为："+(direction== CameraCharacteristics.LENS_FACING_BACK?"后":"前"));
+        //告诉两个拍照和录像的操作类，记录当前的摄像头。
         this.videoRecordOperator.setCurrentDirection(direction);
         this.pictureOperator.setCurrentDirection(direction);
     }
@@ -85,7 +87,13 @@ public class Camera2Manager {
     public  void pauseVideoRecord(){
         ((VideoRecordOperator) this.videoRecordOperator).pauseRecordingVideo();
     }
+
+    /**
+     * 切换到拍照还是录像模式
+     * @param currentMode
+     */
     public void switchMode(int currentMode) {
+        Log.i(TAG,TAG+" 切换模式是： "+(currentMode==Constant.MODE_CAMERA?"拍照":"录像"));
         switch (currentMode) {
             //切换到拍照模式
             case Constant.MODE_CAMERA:
@@ -102,6 +110,11 @@ public class Camera2Manager {
         }
         this.currentOperator.startOperate();
     }
+
+    /**
+     * 切换摄像头，前还是后
+     * @param direction
+     */
      public void switchCameraDirection(int direction){
          //相同摄像头方向，不进行操作
          if (currentDirection== direction){
@@ -110,10 +123,18 @@ public class Camera2Manager {
          //当视频录制状态，不能切换摄像头
          if (currentOperator instanceof  VideoRecordOperator){
              if (((VideoRecordOperator)currentOperator).isVideoRecord()){
+                 ToastUtils.showToast(context,"客官，请结束录像，再切换摄像头");
                  return;
              }
          }
-         Log.i(TAG," 切换模式 :"+direction);
+         switch (direction){
+             case  CAMERA_DIRECTION_BACK:
+                 ToastUtils.showToast(context,"客官，请稍等，正在切换到后摄像头");
+                 break;
+             case CAMERA_DIRECTION_FRONT:
+                 ToastUtils.showToast(context,"客官，请稍等，正在切换到前摄像头");
+                 break;
+         }
          this.currentDirection=direction;
          setCurrentCameraDirection(this.currentDirection);
          this.currentOperator.switchCameraDirectionOperate();
@@ -130,15 +151,17 @@ public class Camera2Manager {
     public float getZoomProportion() {
         return zoomProportion;
     }
-
     public WorkThreadUtils getWorkThreadManager() {
         return workThreadManager;
     }
-
     public boolean isManualFocus() {
         return isManualFocus;
     }
 
+    /**
+     * 设置是否手动调焦
+     * @param manualFocus
+     */
     public void setManualFocus(boolean manualFocus) {
         this.isManualFocus = manualFocus;
         this.currentOperator.notifyFocusState();

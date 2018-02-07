@@ -28,7 +28,7 @@ public abstract class BaseCamera2Operator {
     /**
      * 用于防止应用程序退出前 ，关闭相机
      */
-    protected Semaphore mCameraOpenCloseLock = new Semaphore(1);
+    protected static final Semaphore mCameraOpenCloseLock = new Semaphore(1);
     /**
      * 相机设备
      */
@@ -90,7 +90,7 @@ public abstract class BaseCamera2Operator {
     /**
      * 切换摄像头的操作
      */
-    public   void switchCameraDirectionOperate(){
+    public void switchCameraDirectionOperate(){
               this.stopOperate();
               this.startOperate();
     }
@@ -110,6 +110,7 @@ public abstract class BaseCamera2Operator {
 
         @Override
         public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
+
             return false;
         }
 

@@ -103,7 +103,6 @@ public class VideoRecordOperator extends BaseCamera2Operator {
 
     /**
      * 开始相机的预览界面，创建一个预览的session会话。
-     *
      */
     @Override
     public void startPreView() {
@@ -120,6 +119,9 @@ public class VideoRecordOperator extends BaseCamera2Operator {
             mPreviewBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             Surface previewSurface = new Surface(texture);
             mPreviewBuilder.addTarget(previewSurface);
+            //从拍照切换到摄像头，获取录像完成后需要重新恢复以前的状态
+            float currentZoom = camera2Manager.getZoomProportion() * maxZoom;
+            updateZoomRect(currentZoom);
             mCameraDevice.createCaptureSession(Collections.singletonList(previewSurface),
                     new CameraCaptureSession.StateCallback() {
                         @Override
@@ -189,10 +191,7 @@ public class VideoRecordOperator extends BaseCamera2Operator {
         }
     }
 
-    @Override
-    public void switchCameraDirectionOperate() {
 
-    }
 
     /**
      * 停止录制
@@ -215,6 +214,7 @@ public class VideoRecordOperator extends BaseCamera2Operator {
             e.printStackTrace();
         }
         Subscription subscription = Observable
+                //延迟三十毫秒
                 .timer(30, TimeUnit.MICROSECONDS, Schedulers.computation())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(l -> {
@@ -316,12 +316,14 @@ public class VideoRecordOperator extends BaseCamera2Operator {
             Surface previewSurface = new Surface(texture);
             surfaces.add(previewSurface);
             mPreviewBuilder.addTarget(previewSurface);
-
             // 为 MediaRecorder设置Surface
             Surface recorderSurface = mMediaRecorder.getSurface();
             surfaces.add(recorderSurface);
             mPreviewBuilder.addTarget(recorderSurface);
-
+            //与未录像的状态保持一致。
+            if (zoomRect != null) {
+                mPreviewBuilder.set(CaptureRequest.SCALER_CROP_REGION, zoomRect);
+            }
             // Start a capture session
             // Once the session starts, we can update the UI and start recording
             mCameraDevice.createCaptureSession(surfaces, new CameraCaptureSession.StateCallback() {
@@ -454,7 +456,7 @@ public class VideoRecordOperator extends BaseCamera2Operator {
             }
             Log.i(TAG, "zoom对应的 rect对应的区域 " + zoomRect.left + " " + zoomRect.right + " " + zoomRect.top + " " + zoomRect.bottom);
             mPreviewBuilder.set(CaptureRequest.SCALER_CROP_REGION, zoomRect);
-            updatePreview();
+
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -469,7 +471,7 @@ public class VideoRecordOperator extends BaseCamera2Operator {
             if (null == activity || activity.isFinishing()) {
                 return;
             }
-            Log.i(TAG, "视频录制，重新配置相机设备");
+
             AutoFitTextureView textureView = (AutoFitTextureView) getTextureView();
             CameraManager manager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
             try {
@@ -477,32 +479,36 @@ public class VideoRecordOperator extends BaseCamera2Operator {
                 if (!mCameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
                     throw new RuntimeException("锁住相机开启，超时");
                 }
-                //通常情况下，后摄像头是0，前摄像头是1
-                String cameraId = manager.getCameraIdList()[currentDirection == CameraCharacteristics.LENS_FACING_BACK ? 0 : 1];
-                // 计算相机预览和视频录制的的Size
-                characteristics = manager.getCameraCharacteristics(cameraId);
-                StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-                mSensorOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
-                if (map == null) {
-                    throw new RuntimeException("Cannot get available preview/video sizes");
+                for (String cameraId : manager.getCameraIdList()) {
+                    characteristics = manager.getCameraCharacteristics(cameraId);
+                    if (!Camera2Utils.matchCameraDirection(characteristics, currentDirection)) {
+                        continue;
+                    }
+                    //存储流配置类
+                    StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+                    if (map == null) {
+                        continue;
+                    }
+                    Log.i(TAG, "视频录制，重新配置相机设备" + currentDirection + " " + cameraId);
+                    mSensorOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
+                    Float maxZoomValue = Camera2Utils.getMaxZoom(characteristics);
+                    if (maxZoomValue != null) {
+                        maxZoom = maxZoomValue;
+                    }
+                    // 计算相机预览和视频录制的的Size
+                    mVideoSize = Camera2Utils.chooseVideoSize(map.getOutputSizes(MediaRecorder.class));
+                    mPreviewSize = Camera2Utils.chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height, mVideoSize);
+                    int orientation = activity.getResources().getConfiguration().orientation;
+                    if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
+                        textureView.setAspectRatio(mPreviewSize.getWidth(), mPreviewSize.getHeight());
+                    } else {
+                        textureView.setAspectRatio(mPreviewSize.getHeight(), mPreviewSize.getWidth());
+                    }
+                    configureTransform(activity, width, height);
+                    mMediaRecorder = new MediaRecorder();
+                    manager.openCamera(cameraId, stateCallback, null);
+                    return;
                 }
-                Float maxZoomValue = Camera2Utils.getMaxZoom(characteristics);
-                if (maxZoomValue != null) {
-                    maxZoom = maxZoomValue;
-                }
-                mVideoSize = Camera2Utils.chooseVideoSize(map.getOutputSizes(MediaRecorder.class));
-                mPreviewSize = Camera2Utils.chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class),
-                        width, height, mVideoSize);
-
-                int orientation = activity.getResources().getConfiguration().orientation;
-                if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
-                    textureView.setAspectRatio(mPreviewSize.getWidth(), mPreviewSize.getHeight());
-                } else {
-                    textureView.setAspectRatio(mPreviewSize.getHeight(), mPreviewSize.getWidth());
-                }
-                configureTransform(activity, width, height);
-                mMediaRecorder = new MediaRecorder();
-                manager.openCamera(cameraId, stateCallback, null);
             } catch (CameraAccessException e) {
                 ToastUtils.showToast(appContext, "不能访问相机");
                 activity.finish();
@@ -540,6 +546,7 @@ public class VideoRecordOperator extends BaseCamera2Operator {
     public void notifyFocusState() {
         float currentZoom = camera2Manager.getZoomProportion() * maxZoom;
         updateZoomRect(currentZoom);
+        updatePreview();
     }
 
     private Camera2VideoRecordCallBack camera2VideoRecordCallBack;

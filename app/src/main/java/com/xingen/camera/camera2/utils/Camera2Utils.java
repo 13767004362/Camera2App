@@ -2,10 +2,12 @@ package com.xingen.camera.camera2.utils;
 
 import android.annotation.TargetApi;
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Rect;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CameraMetadata;
+import android.net.Uri;
 import android.os.Build;
 import android.util.Log;
 import android.util.Size;
@@ -13,6 +15,7 @@ import android.util.SparseIntArray;
 
 import com.xingen.camera.camera2.compare.CompareSizeByArea;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -266,6 +269,21 @@ public class Camera2Utils {
             zoomRect=null;
         }
         return zoomRect;
+     }
+
+    /**
+     * 通知图库更新图片
+     * @param context
+     * @param filePath
+     */
+     public static  void sendBroadcastNotify(Context context,String filePath){
+         //扫描指定文件
+         String action=Intent.ACTION_MEDIA_SCANNER_SCAN_FILE;
+         //生成问价路径对应的uri
+         Uri uri=Uri.fromFile(new File(filePath));
+         Intent intent=new Intent(action);
+         intent.setData(uri);
+         context.sendBroadcast(intent);
      }
 
 
