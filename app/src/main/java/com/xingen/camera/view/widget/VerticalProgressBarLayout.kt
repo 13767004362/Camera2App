@@ -2,6 +2,7 @@ package com.xingen.camera.view.widget
 
 import android.content.Context
 import android.util.AttributeSet
+import android.util.Log
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
@@ -197,11 +198,18 @@ class VerticalProgressBarLayout : FrameLayout, View.OnClickListener, OnTouchList
      * 范围从0~1
      */
     private fun moveTouchBtn(verticalBias: Float) {
-        layoutParams!!.verticalBias = verticalBias
-        touch_btn!!.requestLayout()
+         setMoveVerticalBias(verticalBias)
         if (this.verticalMoveResultListener != null) {
             this.verticalMoveResultListener!!.moveDistance(1 - layoutParams!!.verticalBias)
         }
+    }
+
+    fun setMoveVerticalBias(verticalBias: Float) {
+        if (layoutParams!!.verticalBias == verticalBias) {
+            return
+        }
+        layoutParams!!.verticalBias = verticalBias
+        touch_btn!!.requestLayout()
     }
 
     /**
@@ -229,7 +237,7 @@ class VerticalProgressBarLayout : FrameLayout, View.OnClickListener, OnTouchList
         } else {
             verticalBias_new = top_new_weight_distance.toFloat() / weightDistance
         }
-        // Log.i(TAG,"计算出来的顶部权重： "+verticalBias_new+" 先前的:"+verticalBias);
+         Log.i(TAG,"计算出来的顶部权重： "+verticalBias_new+" 先前的:"+verticalBias);
         return verticalBias_new
     }
 

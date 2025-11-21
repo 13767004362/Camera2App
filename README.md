@@ -1,218 +1,173 @@
-# Camera2App
+# CameraXApp
 
-采用android5.0中Camera2 api+MVP模式开发的一个相机程序。
+一个 CameraX + OpenGL + MediaCodec + MediaMuxer 实现的相机App。
 
-运行效果如下：
+***当前相机app支持功能***：
 
+- 基础功能:
+    - 前后摄像头切换(support
+    - 聚焦:自动聚焦、点击聚焦(support)
+    - 数字变焦：手势缩放、滑块缩放(support)
+    - 闪光灯模式切换(自动、常亮、关闭)(support)
+    - 图片拍照(support)
+    - 视频录制mp4,包含音频(support)
+
+- 美颜功能(feature,下期开发中)
+    - 美白
+    - 瘦脸
+    - 大眼
+    - 贴纸
+    - 滤镜
+
+运行效果：
 ![image](https://github.com/13767004362/Camera2App/blob/master/app/device-2018-02-06-144135.png)
 
-
-
------
-包含以下功能：
-
-- 拍照
-
-- 录像：单次录像，暂停与恢复录像。
-
-- 模式设置：自动调焦，闪关灯，手动调焦, zoom调焦
-
-
-----
-
-采用的技术点：
-
-- Camera2 API：相机API
-
-- soviewer.jar: 用于将多个视频合成一个视频
-
-- RxJava和RxAndroid: 异步线程和主线程通讯
-
-- Glide : 异步加载图片和视频
-
-----
-
-
-备注：
-虽然andorid 5.0 出现了camera 2 API特性，但各大android手机系统厂商对camera 2 的支持力度不一致。
-因此，实际开发中还应该通过判断运行手机对camera2 支持力度来决定是否需要用回camera来开发相机。
-
-**Android Camera2 API资料阅览**
----
-
-**简介**：
->Android 5.0开始出现了新的相机Camera 2 API，用来替代以前的camera api。
->
->Camera2 API不仅提高了android系统的拍照性能，还支持RAW照片输出，还可以设置相机的对焦模式，曝光模式，快门等等。
-
-
-**Camera2 中主要的API**:
-
-**类**：
-
-- **CameraManager类** : 摄像头管理类，用于检测、打开系统摄像头，通过`getCameraCharacteristics(cameraId)`可以获取摄像头特征。
-
-- **CameraCharacteristics类**：相机特性类，例如，是否支持自动调焦，是否支持zoom，是否支持闪光灯一系列特征。
-
-- **CameraDevice类**： 相机设备,类似早期的camera类。
-
-- **CameraCaptureSession类**：用于创建预览、拍照的Session类。通过它的`setRepeatingRequest()`方法控制预览界面 , 通过它的`capture()`方法控制拍照动作或者录像动作。
-
-- **CameraRequest类**：一次捕获的请求，可以设置一些列的参数，用于控制预览和拍照参数，例如：对焦模式，曝光模式，zoom参数等等。  
-
-
-接下来，进一步介绍，Camera2 API中的各种常见类和抽象类。
-
-**CameraManager类**
----
+***app 技术架构**：
 
 ```
-  CameraCharacteristics cameraCharacteristics =manager.getCameraCharacteristics(cameraId);
-```
-通过以上代码可以获取摄像头的特征对象，例如： 前后摄像头，分辨率等。
-
-**CameraCharacteristics类**
----
-相机特性类
-
-
-CameraCharacteristics是一个包含相机参数的对象，可以通过一些key获取对应的values.
-
-**以下几种常用的参数**：
-
-- LENS_FACING:获取摄像头方向。LENS_FACING_FRONT是前摄像头，LENS_FACING_BACK是后摄像头。
-
-- SENSOR_ORIENTATION：获取摄像头拍照的方向。
-
-- FLASH_INFO_AVAILABLE：获取是否支持闪光灯。
-
-- SCALER_AVAILABLE_MAX_DIGITAL_ZOOM：获取最大的数字调焦值，也就是zoom最大值。 
-
-- LENS_INFO_MINIMUM_FOCUS_DISTANCE：获取最小的调焦距离，某些手机上获取到的该values为null或者0.0。前摄像头大部分有固定焦距，无法调节。
-
-- INFO_SUPPORTED_HARDWARE_LEVEL：获取摄像头支持某些特性的程度。 
-  
-   以下手机中支持的若干种程度：
-
-   - INFO_SUPPORTED_HARDWARE_LEVEL_FULL：全方位的硬件支持，允许手动控制全高清的摄像、支持连拍模式以及其他新特性。
-   
-   - INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED：有限支持，这个需要单独查询。
-   
-   - INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY：所有设备都会支持，也就是和过时的Camera API支持的特性是一致的。
-
-
-**CameraDevice类**
----
-
-CameraDevice的`reateCaptureRequest(int templateType)`方法创建CaptureRequest.Builder。
-
-templateType参数有以下几种：
-
-- TEMPLATE_PREVIEW ：预览
-
-- TEMPLATE_RECORD：拍摄视频
-
-- TEMPLATE_STILL_CAPTURE：拍照
-
-- TEMPLATE_VIDEO_SNAPSHOT：创建视视频录制时截屏的请求
-
-- TEMPLATE_ZERO_SHUTTER_LAG：创建一个适用于零快门延迟的请求。在不影响预览帧率的情况下最大化图像质量。
-
-- TEMPLATE_MANUAL：创建一个基本捕获请求，这种请求中所有的自动控制都是禁用的(自动曝光，自动白平衡、自动焦点)。
-
-
-**CameraDevice.StateCallback抽象类**
----
-
-该抽象类用于CemeraDevice相机设备状态的回调。
-```
-    /**
-     * 当相机设备的状态发生改变的时候，将会回调。
-     */
-    protected final CameraDevice.StateCallback stateCallback = new CameraDevice.StateCallback() {
-        /**
-         * 当相机打开的时候，调用
-         * @param cameraDevice
-         */
-        @Override
-        public void onOpened(@NonNull CameraDevice cameraDevice) {
-
-            mCameraDevice = cameraDevice;
-            startPreView();
-        }
-
-        @Override
-        public void onDisconnected(@NonNull CameraDevice cameraDevice) {
-        
-            cameraDevice.close();
-            mCameraDevice = null;
-        }
-
-        /**
-         * 发生异常的时候调用
-         *
-         * 这里释放资源，然后关闭界面
-         * @param cameraDevice
-         * @param error
-         */
-        @Override
-        public void onError(@NonNull CameraDevice cameraDevice, int error) {
-            cameraDevice.close();
-            mCameraDevice = null;
-         
-        }
-        /**
-         *当相机被关闭的时候
-         */
-        @Override
-        public void onClosed(@NonNull CameraDevice camera) {
-            super.onClosed(camera);
-        }
-    };
+┌─────────────────────────────────────────────────────────────────┐
+│                    相机+音视频录制流程架构                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ┌─────────────┐    ┌──────────────┐    ┌─────────────────┐   │
+│  │   CameraX   │───▶│  OpenGL纹理   │───▶│ 编码Surface渲染 │   │
+│  │  相机预览    │    │   处理       │    │ (MediaCodec输入)│   │
+│  └─────────────┘    └──────────────┘    └─────────────────┘   │
+│         │                                        │             │
+│         │                                        ▼             │
+│  ┌─────────────┐                              ┌─────────────────┐   │
+│  │  预览Surface  │                              │   视频编码器     │   │
+│  │  (用户可见)  │                              │   (H.264)      │   │
+│  └─────────────┘                              └─────────────────┘   │
+│                                                      │             │
+│  ┌─────────────┐    ┌──────────────┐              │             │
+│  │ AudioRecord │───▶│  音频编码器   │─────────────┤             │
+│  │   音频采集    │    │   (AAC)      │              ▼             │
+│  └─────────────┘    └──────────────┘    ┌─────────────────┐   │
+│                                            │   MediaMuxer    │   │
+│                                            │   合成MP4文件    │   │
+│                                            └─────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-**CameraCaptureSession.StateCallback抽象类**
----
-该抽象类用于Session过程中状态的回调。
+架构角色
+
+- camerax: 相机采集
+- opengl: 图像绘制
+- audioRecord: 音频采集
+- mediacodec: 音视频编码
+- muxer: 音视频合成mp4
+
+#### Camerax相关的说明
+
+**Camerax中UseCase**
+CameraX 提供的 supportedSizes 列表中的 Size (宽x高) 几乎总是基于传感器的自然方向（通常是横向，例如
+4000x3000, 1920x1080）。
+与手机屏幕方向（通常是竖向，例如 1080x1920, 3000x4000）相反的。
+
+- Preview：用于在屏幕上显示相机预览，尺寸受SurfaceView/TextureView大小影响，可以设置分辨率大小。
+- ImageCapture：用于拍摄高质量照片, 可以设置分辨率大小。
+- ImageAnalysis：用于实时图像处理和分析，可以设置分辨率大小。
+- VideoCapture：用于录制视频，不直接设置分辨率，通过QualitySelector控制质量（SD、HD、FHD、UHD）。
+
+**Camerax的支持尺寸列表**
+选择一个传感器方向的supportedSizes 的 Size，camerax 会自动旋转、裁剪、填充以适应屏幕。
+
+ResolutionSelector：用于 ImageCapture、Preview 和
+ImageAnalysis。它允许你通过宽高比（AspectRatioStrategy）和具体尺寸（ResolutionStrategy）来非常精确地控制分辨率（例如
+1920x1080）。这对于静态图像分析或需要精确裁剪的预览非常重要。
+
+ResolutionSelector的函数：
+
+- setAspectRatioStrategy：专门处理宽高比匹配（它会正确处理旋转问题）。
+- setResolutionStrategy：当有多个分辨率符合宽高比时，用它来选择一个（例如选择最高的、或最接近
+  targetWidth x targetHeight 的）。
+- setResolutionFilter：应该只用于最后的精细过滤（例如，“去掉所有小于 100万 像素的”）。
+
+**Camerax中旋转角度**
+rotationDegrees:
+
+- 0度:竖屏;
+- 90度:顺时针旋转90度,横屏;
+- 180度顺时针旋转180度,上下颠倒的竖屏;
+- 270度:顺时针270度或者逆时针90度,横屏
+
+**Camerax中视频录制**
+
+QualitySelector：专门用于 VideoCapture。视频录制不仅仅是分辨率，它还涉及编码器配置、帧率和比特率。QualitySelector
+将这些复杂的配置抽象为简单的“质量”级别（如 UHD、FHD、HD、SD），这与 Android 设备的
+CamcorderProfile（摄像机配置文件）紧密相关。
+
+视频分辨率:
+
+- SD(标清): 720×480 (NTSC) 或 720×576 (PAL)，最低的视频质量标准,文件较小,显示效果较差
+- HD(高清): 1280×720 (720p),文件大小适中,目前网络视频的常见标准
+- FHD(全高清):1920×1080 (1080p),目前大多数高清电视和显示器的标准,提供高质量的视觉体验
+- UHD(超高清): 3840×2160 (2160p/4K),文件很大,提供极致的视觉体验，下一代显示技术的标准
+
+#### MediaCodec相关的说明
+
+**MediaCodec编码模式**
+
+- ByteBuffer 模式：
+    - 格式：COLOR_FORMAT 对应的值是 MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar(
+      图像格式 NV21)。
+    - 操作：通过 MediaCodec.dequeueInputBuffer() 获取数据输入缓冲区，再通过
+      MediaCodec.queueInputBuffer() 手动将 YUV 图像传给 MediaCodec。
+    - 结束标识：queueInputBuffer(..., BUFFER_FLAG_END_OF_STREAM)
+- Surface 模式（推荐使用）:
+    - 格式：COLOR_FORMAT 对应的值是 MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface。
+    - 操作：通过 MediaCodec.createInputSurface() 创建编码数据源 Surface，再通过 OpenGL 纹理，将相机预览图像绘制到该
+      Surface 上。
+    - 结束标识：MediaCodec.signalEndOfInputStream()
+
+camerax + mediacodec 视频编码的实现思路：
+
 ```
-public static abstract class StateCallback {
-
-        //摄像头完成配置，可以处理Capture请求了。
-        public abstract void onConfigured(@NonNull CameraCaptureSession session);
-        
-        //摄像头配置失败
-        public abstract void onConfigureFailed(@NonNull CameraCaptureSession session);
-        
-        //摄像头处于就绪状态，当前没有请求需要处理
-        public void onReady(@NonNull CameraCaptureSession session) {}
-        
-        //摄像头正在处理请求
-        public void onActive(@NonNull CameraCaptureSession session) {}
-        
-        //请求队列中为空，准备着接受下一个请求。
-        public void onCaptureQueueEmpty(@NonNull CameraCaptureSession session) {}
-        
-        //会话被关闭
-        public void onClosed(@NonNull CameraCaptureSession session) {}
-        
-        //Surface准备就绪
-        public void onSurfacePrepared(@NonNull CameraCaptureSession session,@NonNull Surface surface) {}
-        
-}
+Camera → OES Texture → FBO(美颜处理)
+           ↓
+        draw to FBO texture
+           ↓
+        draw to preview EGLSurface
+           ↓
+        draw to encoder EGLSurface → eglSwapBuffers() → 编码帧产生
 ```
 
-**资源参考**：
+##### 音视频编码同轨pts计算
 
-- **官方关于camera2 博客介绍**:https://medium.com/google-developers/detecting-camera-features-with-camera2-61675bb7d1bf
+**视频帧的pts 计算**
+mediacodec 的surface模式,进行视频编码时,计算pts 的方式有3种：
 
-- **极客学院关于Camera2的介绍**： http://wiki.jikexueyuan.com/project/android-actual-combat-skills/android-hardware-camera2-operating-guide.html
+```kotlin
+// 1. 基于帧率的理论时间戳
+val frameTimeNs = frameIndex * 1000000000L / frameRate
 
-- [**Google的CameraView库**](https://github.com/google/cameraview)
+// 2. 基于系统时间的实时时间戳  
+val elapsedTimeNs = (System.nanoTime() - startTimeNs)
 
-- [android-Camera2Basic](https://github.com/googlesamples/android-Camera2Basic/#readme)
+// 3. 相机硬件时间戳（推荐）
+val cameraTimestampNs = surfaceTexture.getTimestamp() 
+```
 
-- [android-Camera2Raw](https://github.com/googlesamples/android-Camera2Raw/#readme)
+接着通过`EGLExt.eglPresentationTimeANDROID() `设置正确的时间戳。mediacodec 编码出来的数据包,单位是微妙。
 
-- [官方的android-Camera2Video](https://github.com/googlesamples/android-Camera2Video/#readme)
+***音频帧的pts***
+mediaCodec的ByteBuffer模式，进行音频编码时,pts 的计算方式有2种：
 
+```kotlin
+// 1. 基于帧率的理论时间戳
+val bytesPerSample = 2 // 16-bit = 2字节
+val channel = 1
+val sampleRate = 44100
+val samplesPerChannel = size / (channel * bytesPerSample)
+// 计算持续时间,单位微妙
+val durationUs = (1000000 * samplesPerChannel / sampleRate).toLong()
 
+// 2. 基于系统时间的实时时间戳  
+val durationUs = (System.nanoTime() - startTimeNs) / 1000
+```
+
+接着通过`mediaCodec!!.queueInputBuffer(inputBufferIndex, 0, size, durationUs, 0)`设置正确时间戳。mediacodec
+编码出来的数据包,单位是微妙。
+
+虽然 视频流中EGL输入纳秒，音频直接输入微秒，但MediaCodec输出统一为微秒。

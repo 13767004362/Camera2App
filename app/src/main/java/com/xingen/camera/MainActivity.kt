@@ -10,6 +10,7 @@ import android.os.Bundle
 import android.util.Log
 import android.util.Size
 import android.view.MotionEvent
+import android.view.ScaleGestureDetector
 import android.view.Surface
 import android.view.TextureView
 import android.view.View
@@ -30,6 +31,7 @@ import com.xingen.camera.camerax.VideoEncodeConfig
 import com.xingen.camera.databinding.ActivityMainBinding
 import com.xingen.camera.opengl.GLThread
 import com.xingen.camera.view.systembar.SystemBarUtils.setStickyStyle
+import com.xingen.camera.view.widget.VerticalProgressBarLayout
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
@@ -78,14 +80,6 @@ class MainActivity : BaseVMActivity<ActivityMainBinding, MainViewModel>() {
             currentImgUri?.run {
                 PictureActivity.openActivity(this@MainActivity, this)
             }
-        }
-        // 初始化对焦指示器为隐藏状态
-        binding.focusIndicator.visibility = View.GONE
-        binding.cameraTextureView.setOnTouchListener { view, motionEvent ->
-            if (motionEvent.action == android.view.MotionEvent.ACTION_DOWN) {
-                setupClickFocus(view,motionEvent)
-            }
-            true
         }
         requestCameraPermission()
         initGLThread()
@@ -184,7 +178,7 @@ class MainActivity : BaseVMActivity<ActivityMainBinding, MainViewModel>() {
                 val msg = "拍照成功"
                 Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
                 Log.d(TAG, msg)
-                currentImgUri =it.uri
+                currentImgUri = it.uri
                 Glide.with(this@MainActivity).load(it.uri!!).into(binding.cameraShow)
             } else {
                 val msg = "拍照失败: ${it.error!!.message}"
@@ -192,16 +186,17 @@ class MainActivity : BaseVMActivity<ActivityMainBinding, MainViewModel>() {
                 Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
             }
         }
-        viewModel.recordVideoEvent.observe(this){
-            if (it){
+        viewModel.recordVideoEvent.observe(this) {
+            if (it) {
                 Toast.makeText(baseContext, "录制成功，保存相册成功", Toast.LENGTH_SHORT).show()
-            }else{
+            } else {
                 Toast.makeText(baseContext, "保存相册失败", Toast.LENGTH_SHORT).show()
             }
         }
 
     }
-    var currentImgUri: Uri?=null
+
+    var currentImgUri: Uri? = null
 
     override fun onDestroy() {
         super.onDestroy()
@@ -210,7 +205,8 @@ class MainActivity : BaseVMActivity<ActivityMainBinding, MainViewModel>() {
         }
         glThread?.stopRender()
     }
-   var videoPath: String?=null
+
+    var videoPath: String? = null
     private fun waitSurfaceViewReady() {
         videoPath = externalCacheDir!!.absolutePath + "/" + "test.mp4"
         viewModel.initEncode(
@@ -288,7 +284,7 @@ class MainActivity : BaseVMActivity<ActivityMainBinding, MainViewModel>() {
                 // 在重新绑定之前，先解绑所有用例
                 cameraProvider.unbindAll()
                 // 将用例绑定到相机和当前生命周期
-               val camera=  cameraProvider.bindToLifecycle(
+                val camera = cameraProvider.bindToLifecycle(
                     this, cameraSelector, preview
                 )
                 // 获取相机控制
@@ -309,7 +305,7 @@ class MainActivity : BaseVMActivity<ActivityMainBinding, MainViewModel>() {
                     }
                 }
                 setAutoFocus()
-
+                setupZoomControls()
             } catch (e: Exception) {
                 Log.e(TAG, "用例绑定失败", e)
                 Toast.makeText(this, "启动相机失败", Toast.LENGTH_SHORT).show()
@@ -319,18 +315,90 @@ class MainActivity : BaseVMActivity<ActivityMainBinding, MainViewModel>() {
         }, ContextCompat.getMainExecutor(this))
 
     }
+
+    //数字变焦/缩放相关变量
+    private var currentZoomRatio = 1.0f
+    private var maxZoomRatio = 1.0f
+    private var minZoomRatio = 1.0f
+
+    /**
+     * 设置缩放变焦
+     */
+
+    @SuppressWarnings("all")
+    private fun setupZoomControls() {
+        // 初始化对焦指示器为隐藏状态
+        binding.focusIndicator.visibility = View.GONE
+        // 监听缩放状态变化, 相机的当前/最大/最小变焦比例
+        cameraInfo.zoomState.observe(this) { zoomState ->
+            maxZoomRatio = zoomState.maxZoomRatio
+            minZoomRatio = zoomState.minZoomRatio
+            currentZoomRatio = zoomState.zoomRatio
+
+            val zoomChange = (currentZoomRatio - minZoomRatio) / (maxZoomRatio - minZoomRatio)
+            binding.cameraVerticalProgressBar.setMoveVerticalBias(1 - zoomChange)
+            Log.d(
+                TAG,
+                "Zoom range: $minZoomRatio - $maxZoomRatio, current: $currentZoomRatio"
+            )
+        }
+
+        // 设置缩放手势监听
+        val scaleGestureDetector = ScaleGestureDetector(
+            this,
+            object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+                override fun onScale(detector: ScaleGestureDetector): Boolean {
+                    // 计算出新的缩放值
+                    val newZoomRatio = currentZoomRatio * detector.scaleFactor
+                    // 限制在范围内
+                    val clampedZoomRatio = newZoomRatio.coerceIn(minZoomRatio, maxZoomRatio)
+
+                    //调整缩放情况
+                    cameraControl.setZoomRatio(clampedZoomRatio)
+                    return true
+                }
+            })
+
+        binding.cameraTextureView.setOnTouchListener { view, event ->
+            scaleGestureDetector.onTouchEvent(event)
+            if (!scaleGestureDetector.isInProgress && event.action == MotionEvent.ACTION_DOWN) {
+                setupClickFocus(view, event)
+            }
+            return@setOnTouchListener true
+        }
+        binding.cameraVerticalProgressBar.verticalMoveResultListener =
+            object : VerticalProgressBarLayout.VerticalMoveResultListener {
+                override fun moveDistance(verticalBias: Float) {
+                    // 计算新的缩放值
+                    val zoomChange = (maxZoomRatio - minZoomRatio) * (verticalBias)
+                    val newZoomRatio = minZoomRatio + zoomChange
+                    // 限制在范围内
+                    val clampedZoomRatio = newZoomRatio.coerceIn(minZoomRatio, maxZoomRatio)
+                    Log.i(TAG, "Zoom change: $zoomChange, new zoom: $clampedZoomRatio")
+                    //调整缩放情况
+                    cameraControl.setZoomRatio(clampedZoomRatio)
+                }
+
+            }
+
+    }
+
+
     /**
      * 设置点击对焦
      */
-    private fun setupClickFocus(view: View,event: MotionEvent) {
+    private fun setupClickFocus(view: View, event: MotionEvent) {
         val textureView = view as TextureView
         // 获取点击位置相对于TextureView的坐标
         val x = event.x
         val y = event.y
         // 创建测光点工厂
-        val factory = SurfaceOrientedMeteringPointFactory(textureView.width.toFloat(), textureView.height.toFloat())
+        val factory = SurfaceOrientedMeteringPointFactory(
+            textureView.width.toFloat(),
+            textureView.height.toFloat()
+        )
         // 创建测光点
-        val point = factory.createPoint(x,y)
+        val point = factory.createPoint(x, y)
         // 创建对焦动作
         val action = FocusMeteringAction.Builder(point, FocusMeteringAction.FLAG_AF)
             .setAutoCancelDuration(5, TimeUnit.SECONDS) // 设置对焦持续时间
@@ -338,8 +406,9 @@ class MainActivity : BaseVMActivity<ActivityMainBinding, MainViewModel>() {
         // 执行对焦
         cameraControl.startFocusAndMetering(action)
         // 显示对焦指示器
-        showFocusIndicator(x,y)
+        showFocusIndicator(x, y)
     }
+
     /**
      * 显示对焦指示器
      */
@@ -372,7 +441,7 @@ class MainActivity : BaseVMActivity<ActivityMainBinding, MainViewModel>() {
             .start()
     }
 
-    private val hideFocusIndicatorTask= Runnable{
+    private val hideFocusIndicatorTask = Runnable {
         binding.focusIndicator.visibility = View.GONE
     }
 
