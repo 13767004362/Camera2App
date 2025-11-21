@@ -46,6 +46,7 @@ class MainActivity : BaseVMActivity<ActivityMainBinding, MainViewModel>() {
     private lateinit var cameraControl: CameraControl
     private lateinit var cameraInfo: CameraInfo
     override fun initViewImpl(savedInstanceState: Bundle?) {
+        Log.i(TAG, "initViewImpl")
         binding.cameraRightTopController.setOnClickListener {
             if (viewModel.isRecording()) {
                 // 停止录像
@@ -119,20 +120,10 @@ class MainActivity : BaseVMActivity<ActivityMainBinding, MainViewModel>() {
         setStickyStyle(window)
     }
 
-    /**
-     * 监听系统UI的显示，进行特殊处理
-     */
-    private fun setSystemUIChangeListener() {
-        window.decorView.setOnSystemUiVisibilityChangeListener({ visibility ->
-            //当系统UI显示的时候（例如输入法显示的时候），再次隐藏
-            if ((visibility and View.SYSTEM_UI_FLAG_FULLSCREEN) == 0) {
-                setStickyStyle(window)
-            }
-        })
-    }
 
     private var imageSurfaceTexture: SurfaceTexture? = null
     private fun initGLThread() {
+        Log.i(TAG, "initGLThread")
         glThread = GLThread()
         val rotation = if (Build.VERSION.SDK_INT >= 30) {
             display.rotation
@@ -208,6 +199,7 @@ class MainActivity : BaseVMActivity<ActivityMainBinding, MainViewModel>() {
 
     var videoPath: String? = null
     private fun waitSurfaceViewReady() {
+        Log.i(TAG, "waitSurfaceViewReady")
         videoPath = externalCacheDir!!.absolutePath + "/" + "test.mp4"
         viewModel.initEncode(
             videoPath!!,
@@ -262,6 +254,7 @@ class MainActivity : BaseVMActivity<ActivityMainBinding, MainViewModel>() {
      * 有相机权限后，开启相机
      */
     private fun startCamera() {
+        Log.i(TAG, "startCamera")
         //返回当前可以绑定生命周期的 ProcessCameraProvider
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
         cameraProviderFuture.addListener({
@@ -283,6 +276,7 @@ class MainActivity : BaseVMActivity<ActivityMainBinding, MainViewModel>() {
             try {
                 // 在重新绑定之前，先解绑所有用例
                 cameraProvider.unbindAll()
+                Log.i(TAG, "startCamera bind lifecycle")
                 // 将用例绑定到相机和当前生命周期
                 val camera = cameraProvider.bindToLifecycle(
                     this, cameraSelector, preview

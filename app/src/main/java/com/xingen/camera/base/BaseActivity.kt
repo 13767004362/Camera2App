@@ -27,10 +27,7 @@ abstract class BaseActivity : AppCompatActivity() {
 
         setStatusBar()
         initConfig(savedInstanceState)
-        //采用延迟初始化UI,提高Activity启动速度。
-        mainHandler.post {
-            initView(savedInstanceState)
-        }
+        initView(savedInstanceState)
     }
 
     /**
