@@ -2,18 +2,18 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.xingen.camera">
 
-    <!--相机权限-->
-    <uses-permission android:name="android.permission.CAMERA" />
-    <!--使用摄像头硬件功能-->
-    <uses-feature android:name="android.hardware.camera" />
+
     <!--自动对焦功能-->
     <uses-feature android:name="android.hardware.camera.autofocus" />
     <!--闪光灯功能-->
     <uses-feature android:name="android.hardware.camera.flash" />
-    <!-- 录音权限 -->
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <!-- 读写权限-->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <!--使用相机权限-->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera.any" />
+    <!--使用麦克风权限-->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <application
         android:name="com.xingen.camera.base.BaseApplication"
@@ -24,6 +24,7 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
         <activity
+            android:exported="true"
             android:name="com.xingen.camera.MainActivity"
             android:screenOrientation="landscape">
             <intent-filter>

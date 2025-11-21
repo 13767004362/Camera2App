@@ -6,10 +6,11 @@ import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraDevice;
 import android.media.Image;
 import android.media.ImageReader;
-import android.support.annotation.NonNull;
 import android.util.SparseIntArray;
 import android.view.Surface;
 import android.view.TextureView;
+
+import androidx.annotation.NonNull;
 
 import com.xingen.camera.base.BaseApplication;
 

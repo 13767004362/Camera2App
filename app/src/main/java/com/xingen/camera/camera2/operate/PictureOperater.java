@@ -21,13 +21,13 @@ import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.Image;
 import android.media.ImageReader;
-import android.os.Process;
-import android.support.annotation.NonNull;
-import android.text.TextUtils;
+
 import android.util.Log;
 import android.util.Size;
 import android.view.Surface;
 import android.view.TextureView;
+
+import androidx.annotation.NonNull;
 
 import com.xingen.camera.camera2.BaseCamera2Operator;
 import com.xingen.camera.camera2.Camera2Manager;

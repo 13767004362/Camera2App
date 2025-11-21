@@ -8,7 +8,7 @@
     tools:ignore="MissingDefaultResource">
 
     <com.xingen.camera.widget.AutoFitTextureView
-        android:id="@+id/camera_auto_fit_texture_view"
+        android:id="@+id/camera_texture_view"
         android:layout_width="0dp"
         android:layout_height="0dp"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -87,7 +87,7 @@
         android:id="@+id/camera_right_top_controller"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="9.3dp"
+        android:layout_marginTop="30dp"
         android:src="@drawable/camera_init_iv"
 
         app:layout_constraintLeft_toLeftOf="@id/camera_guideline_3"
@@ -123,33 +123,6 @@
         app:layout_constraintRight_toRightOf="@+id/camera_bg2"
         app:layout_constraintTop_toTopOf="@+id/camera_right_bg_2" />
 
-    <RadioGroup
-        android:id="@+id/camera_switch_radioGroup"
-        android:layout_width="wrap_content"
-        android:layout_height="0dp"
-        android:orientation="vertical"
-        app:layout_constraintBottom_toBottomOf="@+id/camera_guideline_5"
-        app:layout_constraintLeft_toLeftOf="@+id/camera_guideline_3"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/camera_guideline_4">
-        <RadioButton
-            android:id="@+id/camera_video_record_btn"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="@drawable/camera_switch_video_record_btn"
-            android:button="@null" />
-       <Space
-           android:layout_width="wrap_content"
-           android:layout_height="0dp"
-           android:layout_weight="1"/>
-        <RadioButton
-            android:id="@+id/camera_switch_picture_btn"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="@drawable/camera_switch_picture_btn"
-            android:button="@null"
-            android:checked="true" />
-    </RadioGroup>
 
 
     <ImageView

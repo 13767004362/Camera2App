@@ -17,12 +17,13 @@ import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.Image;
 import android.media.MediaRecorder;
-import android.support.annotation.NonNull;
 import android.util.Log;
 import android.util.Size;
 import android.view.Surface;
 import android.view.TextureView;
 import android.widget.Toast;
+
+import androidx.annotation.NonNull;
 
 import com.xingen.camera.camera2.BaseCamera2Operator;
 import com.xingen.camera.camera2.Camera2Manager;
