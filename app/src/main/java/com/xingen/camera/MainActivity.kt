@@ -4,16 +4,22 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.SurfaceTexture
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.util.Size
+import android.view.MotionEvent
 import android.view.Surface
 import android.view.TextureView
 import android.view.View
 import android.widget.Toast
+import androidx.camera.core.CameraControl
+import androidx.camera.core.CameraInfo
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.FocusMeteringAction
 import androidx.camera.core.Preview
+import androidx.camera.core.SurfaceOrientedMeteringPointFactory
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -24,8 +30,8 @@ import com.xingen.camera.camerax.VideoEncodeConfig
 import com.xingen.camera.databinding.ActivityMainBinding
 import com.xingen.camera.opengl.GLThread
 import com.xingen.camera.view.systembar.SystemBarUtils.setStickyStyle
-import java.io.File
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 /**
  * Created by ${xinGen} on 2017/10/19.
@@ -35,7 +41,8 @@ class MainActivity : BaseVMActivity<ActivityMainBinding, MainViewModel>() {
 
     // 默认后摄像头
     var cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
-
+    private lateinit var cameraControl: CameraControl
+    private lateinit var cameraInfo: CameraInfo
     override fun initViewImpl(savedInstanceState: Bundle?) {
         binding.cameraRightTopController.setOnClickListener {
             if (viewModel.isRecording()) {
@@ -66,6 +73,19 @@ class MainActivity : BaseVMActivity<ActivityMainBinding, MainViewModel>() {
                     startCamera()
                 }
             }
+        }
+        binding.cameraShow.setOnClickListener {
+            currentImgUri?.run {
+                PictureActivity.openActivity(this@MainActivity, this)
+            }
+        }
+        // 初始化对焦指示器为隐藏状态
+        binding.focusIndicator.visibility = View.GONE
+        binding.cameraTextureView.setOnTouchListener { view, motionEvent ->
+            if (motionEvent.action == android.view.MotionEvent.ACTION_DOWN) {
+                setupClickFocus(view,motionEvent)
+            }
+            true
         }
         requestCameraPermission()
         initGLThread()
@@ -164,6 +184,7 @@ class MainActivity : BaseVMActivity<ActivityMainBinding, MainViewModel>() {
                 val msg = "拍照成功"
                 Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
                 Log.d(TAG, msg)
+                currentImgUri =it.uri
                 Glide.with(this@MainActivity).load(it.uri!!).into(binding.cameraShow)
             } else {
                 val msg = "拍照失败: ${it.error!!.message}"
@@ -180,6 +201,7 @@ class MainActivity : BaseVMActivity<ActivityMainBinding, MainViewModel>() {
         }
 
     }
+    var currentImgUri: Uri?=null
 
     override fun onDestroy() {
         super.onDestroy()
@@ -266,10 +288,12 @@ class MainActivity : BaseVMActivity<ActivityMainBinding, MainViewModel>() {
                 // 在重新绑定之前，先解绑所有用例
                 cameraProvider.unbindAll()
                 // 将用例绑定到相机和当前生命周期
-                cameraProvider.bindToLifecycle(
+               val camera=  cameraProvider.bindToLifecycle(
                     this, cameraSelector, preview
                 )
-
+                // 获取相机控制
+                cameraControl = camera.cameraControl
+                cameraInfo = camera.cameraInfo
                 preview.setSurfaceProvider {
                     // 这里使用opengl创建的外部纹理
                     val surfaceTexture: SurfaceTexture = imageSurfaceTexture!!
@@ -284,6 +308,7 @@ class MainActivity : BaseVMActivity<ActivityMainBinding, MainViewModel>() {
                         //surface.release()
                     }
                 }
+                setAutoFocus()
 
             } catch (e: Exception) {
                 Log.e(TAG, "用例绑定失败", e)
@@ -294,7 +319,73 @@ class MainActivity : BaseVMActivity<ActivityMainBinding, MainViewModel>() {
         }, ContextCompat.getMainExecutor(this))
 
     }
+    /**
+     * 设置点击对焦
+     */
+    private fun setupClickFocus(view: View,event: MotionEvent) {
+        val textureView = view as TextureView
+        // 获取点击位置相对于TextureView的坐标
+        val x = event.x
+        val y = event.y
+        // 创建测光点工厂
+        val factory = SurfaceOrientedMeteringPointFactory(textureView.width.toFloat(), textureView.height.toFloat())
+        // 创建测光点
+        val point = factory.createPoint(x,y)
+        // 创建对焦动作
+        val action = FocusMeteringAction.Builder(point, FocusMeteringAction.FLAG_AF)
+            .setAutoCancelDuration(5, TimeUnit.SECONDS) // 设置对焦持续时间
+            .build()
+        // 执行对焦
+        cameraControl.startFocusAndMetering(action)
+        // 显示对焦指示器
+        showFocusIndicator(x,y)
+    }
+    /**
+     * 显示对焦指示器
+     */
+    private fun showFocusIndicator(x: Float, y: Float) {
+        mainHandler.removeCallbacks(hideFocusIndicatorTask)
+        // 显示对焦指示器
+        binding.focusIndicator.visibility = View.VISIBLE
 
+        // 计算对焦指示器的位置，使其中心点位于点击位置
+        val indicatorWidth = binding.focusIndicator.width.toFloat()
+        val indicatorHeight = binding.focusIndicator.height.toFloat()
+
+        // 设置对焦指示器的位置
+        binding.focusIndicator.x = x - indicatorWidth / 2
+        binding.focusIndicator.y = y - indicatorHeight / 2
+
+        // 创建一个缩放动画
+        binding.focusIndicator.scaleX = 1.5f
+        binding.focusIndicator.scaleY = 1.5f
+
+        // 动画效果：缩小到原始大小
+        binding.focusIndicator.animate()
+            .scaleX(1.0f)
+            .scaleY(1.0f)
+            .setDuration(500)
+            .withEndAction {
+                // 动画结束后，延迟一段时间隐藏指示器
+                mainHandler.postDelayed(hideFocusIndicatorTask, 500)
+            }
+            .start()
+    }
+
+    private val hideFocusIndicatorTask= Runnable{
+        binding.focusIndicator.visibility = View.GONE
+    }
+
+    /**
+     * 启用连续自动对焦
+     */
+    private fun setAutoFocus() {
+        val autoFocusPoint = SurfaceOrientedMeteringPointFactory(1f, 1f)
+            .createPoint(0.5f, 0.5f)
+        val action = FocusMeteringAction.Builder(autoFocusPoint, FocusMeteringAction.FLAG_AF)
+            .build()
+        cameraControl.startFocusAndMetering(action)
+    }
 
     override fun onRequestPermissionsResult(
         requestCode: Int,

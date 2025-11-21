@@ -16,6 +16,7 @@ import com.xingen.camera.media.recod.AudioCapture
 import com.xingen.camera.utils.GalleryUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.io.File
 import java.nio.ByteBuffer
 
 /**
@@ -122,6 +123,13 @@ class MainViewModel : BaseViewModel() {
                     recordVideoEvent.postValue(true)
               }catch (e: Exception){
                     recordVideoEvent.postValue(false)
+              }finally {
+                  // 删除临时文件
+                  if (outputPath != null) {
+                      File(outputPath!!).let {
+                          if (it.exists()) it.delete()
+                      }
+                  }
               }
         }
     }

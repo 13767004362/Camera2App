@@ -7,14 +7,29 @@
     android:layout_height="match_parent"
     tools:ignore="MissingDefaultResource">
 
-    <com.xingen.camera.widget.AutoFitTextureView
-        android:id="@+id/camera_texture_view"
+
+    <RelativeLayout
         android:layout_width="0dp"
         android:layout_height="0dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintLeft_toLeftOf="@+id/camera_guideline_1"
         app:layout_constraintRight_toRightOf="@+id/camera_guideline_3"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent" >
+        <com.xingen.camera.widget.AutoFitTextureView
+            android:id="@+id/camera_texture_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            />
+        <!-- 对焦指示器 -->
+        <View
+            android:id="@+id/focus_indicator"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/focus_indicator"
+            android:visibility="gone" />
+    </RelativeLayout>
+
+
 
     <ImageView
         android:id="@+id/camera_bg1"

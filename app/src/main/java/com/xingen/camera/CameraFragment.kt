@@ -118,7 +118,7 @@ class CameraFragment : Fragment(), CameraContract.View<CameraContract.Presenter>
             }
 
             R.id.camera_show -> if (!TextUtils.isEmpty(filePath)) {
-                PictureActivity.openActivity(requireActivity(), filePath)
+               // PictureActivity.openActivity(requireActivity(), filePath)
             }
 
             else -> {}

@@ -2,6 +2,7 @@ package com.xingen.camera
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.widget.ImageView
@@ -28,7 +29,7 @@ class PictureActivity : BaseActivity() {
     override fun initView(savedInstanceState: Bundle?) {
         val bundle = intent.extras
         if ((bundle != null) and bundle!!.containsKey(TAG)) {
-            val url = bundle.getString(TAG)
+            val url = bundle.getParcelable<Uri>(TAG)
             val imageView = findViewById<ImageView>(R.id.picture_show_iv)
             Glide.with(this).asBitmap().load(url).into(imageView)
         }
@@ -37,9 +38,9 @@ class PictureActivity : BaseActivity() {
     companion object {
         val TAG: String = PictureActivity::class.java.getSimpleName()
 
-        fun openActivity(context: Context, url: String?) {
+        fun openActivity(context: Context, uri: Uri ) {
             val bundle = Bundle()
-            bundle.putString(TAG, url)
+            bundle.putParcelable(TAG, uri)
             val intent = Intent(context, PictureActivity::class.java)
             intent.putExtras(bundle)
             context.startActivity(intent)

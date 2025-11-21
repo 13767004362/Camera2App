@@ -146,7 +146,7 @@ class VerticalProgressBarLayout : FrameLayout, View.OnClickListener, OnTouchList
      * @return
      */
     private fun createLineView(): TextView {
-        val textView = TextView(getContext())
+        val textView = TextView(context)
         val layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT)
         layoutParams.gravity = Gravity.CENTER_HORIZONTAL
         textView.setLayoutParams(layoutParams)
@@ -155,7 +155,7 @@ class VerticalProgressBarLayout : FrameLayout, View.OnClickListener, OnTouchList
     }
 
     private fun createImageView(imageResource: Int): ImageView {
-        val imageView = ImageView(getContext())
+        val imageView = ImageView(context)
         imageView.setImageResource(imageResource)
         return imageView
     }
@@ -170,7 +170,7 @@ class VerticalProgressBarLayout : FrameLayout, View.OnClickListener, OnTouchList
     override fun onClick(v: View) {
         var old: Float = layoutParams!!.verticalBias
         //增加
-        if (v.getId() == viewId[0]) {
+        if (v.id == viewId[0]) {
             if (old > 0) {
                 old -= 0.1.toFloat()
                 if (old < 0) {
@@ -179,7 +179,7 @@ class VerticalProgressBarLayout : FrameLayout, View.OnClickListener, OnTouchList
                 moveTouchBtn(old)
             }
         } //减少
-        else if (v.getId() == viewId[1]) {
+        else if (v.id == viewId[1]) {
             if (old < 1) {
                 old += 0.1.toFloat()
                 if (old > 1) {
